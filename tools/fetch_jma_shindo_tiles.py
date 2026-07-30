@@ -57,6 +57,62 @@ DEFAULT_OUT = ROOT / "viewer" / "public" / "data" / "jma_shindo"
 
 ZOOM_MIN, ZOOM_MAX = 5, 11
 
+# 配信 PNG に焼かれている気象庁の震度階級色（実測）。震度4以上しか塗られていない。
+JMA_CLASS_COLORS: dict[str, str] = {
+    "震度4": "#fae696",
+    "震度5弱": "#ffe600",
+    "震度5強": "#ff9900",
+    "震度6弱": "#ff2800",
+    "震度6強": "#a50021",
+    "震度7": "#b40068",
+}
+
+# 防災科研 J-RISQ の推計震度配色（GetLegendGraphic の実物から採色）のうち、
+# 気象庁の図にある震度4以上に対応する分。
+JRISQ_CLASS_COLORS: dict[str, str] = {
+    "震度4": "#1e973d",
+    "震度5弱": "#96d050",
+    "震度5強": "#f7f618",
+    "震度6弱": "#faaa46",
+    "震度6強": "#f45178",
+    "震度7": "#950d05",
+}
+
+PALETTES = {"jma": JMA_CLASS_COLORS, "jrisq": JRISQ_CLASS_COLORS}
+
+
+def _rgb(hex_: str) -> tuple[int, int, int]:
+    return tuple(int(hex_[i : i + 2], 16) for i in (1, 3, 5))  # type: ignore[return-value]
+
+
+def recolor(img, palette: str):
+    """階級色を別のパレットへ置き換える。
+
+    配信 PNG は境界がアンチエイリアスされていて中間色を数百種持つため、
+    完全一致の置換では縁だけ元の色が残る。各画素を気象庁の階級色のうち
+    最も近いものへ割り当ててから置き換える（＝再分類）。
+    アンチエイリアスはこれで失われるが、階級図としてはそのほうが正しい。
+    """
+    import numpy as np
+
+    # 距離は int32 で計算する。int16 だと 255^2 × 3 = 195,075 が上限 32,767 を超えて
+    # 巻き上がり、最近傍がでたらめになる（実際にそれで階級の分布が逆転した）。
+    src = np.array([_rgb(h) for h in JMA_CLASS_COLORS.values()], dtype=np.int32)
+    dst = np.array([_rgb(PALETTES[palette][k]) for k in JMA_CLASS_COLORS], dtype=np.uint8)
+
+    a = np.array(img, dtype=np.uint8)
+    rgb = a[:, :, :3].astype(np.int32)
+    alpha = a[:, :, 3]
+    # 各画素と6階級色の距離 → 最近傍の添字
+    d = ((rgb[:, :, None, :] - src[None, None, :, :]) ** 2).sum(axis=3)
+    idx = d.argmin(axis=2)
+    out = np.dstack([dst[idx], alpha])
+    # 透明画素は色を持たせない（縁に色が滲まないように）
+    out[alpha == 0] = 0
+    from PIL import Image
+
+    return Image.fromarray(out, mode="RGBA")
+
 
 def primary_mesh_bounds(code: str) -> tuple[float, float, float, float]:
     """1次地域メッシュコード（4桁）の範囲 (西, 南, 東, 北)。
@@ -93,6 +149,12 @@ def main() -> int:
     ap.add_argument("--out", default=str(DEFAULT_OUT))
     ap.add_argument("--list", action="store_true", help="索引から震度5弱以上の地震を並べて終了")
     ap.add_argument("--keep-work", action="store_true", help="中間ファイルを残す")
+    ap.add_argument(
+        "--palette",
+        choices=sorted(PALETTES),
+        default="jrisq",
+        help="震度階級の配色。jma=気象庁のまま / jrisq=防災科研 J-RISQ の配色に置き換える（既定）",
+    )
     args = ap.parse_args()
 
     index = load_index()
@@ -116,6 +178,7 @@ def main() -> int:
     print(f"対象: {args.event}")
     print(f"  {hypo.get('at')} {hypo.get('epi')} M{hypo.get('mag')} 最大計測震度 {hypo.get('maxi')}")
     print(f"  1次メッシュ {len(meshes)}区画  範囲 {ev.get('bounds')}")
+    print(f"  配色: {args.palette}" + ("（気象庁のまま）" if args.palette == "jma" else "（防災科研 J-RISQ の配色へ再分類）"))
 
     out = Path(args.out)
     if out.exists():
@@ -135,7 +198,10 @@ def main() -> int:
         rgba = work / f"{m}_rgba.png"
         with Image.open(png) as im:
             mode = im.mode
-            im.convert("RGBA").save(rgba)
+            norm = im.convert("RGBA")
+            if args.palette != "jma":
+                norm = recolor(norm, args.palette)
+            norm.save(rgba)
         w, s, e, n = primary_mesh_bounds(m)
         tif = work / f"{m}.tif"
         # 測地情報を与える。-a_ullr は左上→右下の順。
@@ -176,9 +242,17 @@ def main() -> int:
         "mesh_num": meshes,
         "bounds": ev.get("bounds"),
         "rank_cnt": ev.get("rank_cnt"),
+        "palette": args.palette,
+        "palette_colors": PALETTES[args.palette],
         "note": (
             "1次メッシュごとの800×800px PNG を GDAL で再投影してタイル化したもの。"
             "画像は震度4以上だけを塗っており、震度1〜3は rank_cnt にはあるが描かれない。"
+            + (
+                ""
+                if args.palette == "jma"
+                else "配色は各画素を気象庁の階級色の最近傍へ再分類してから"
+                "防災科研 J-RISQ の配色に置き換えている（値は気象庁のまま）。"
+            )
         ),
         "zoom": [ZOOM_MIN, ZOOM_MAX],
         "tiles": len(pngs),
