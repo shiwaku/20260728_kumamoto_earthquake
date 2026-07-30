@@ -779,13 +779,13 @@ body {
   color: var(--ink);
 }
 
-/* 開閉の ⓘ は単色なので、反転でそのまま明色になる（色付きの状態を持たない） */
-:root[data-theme='dark'] .maplibregl-ctrl-attrib.maplibregl-compact::after {
-  filter: invert(1);
-}
-
+/* 開閉の ⓘ。MapLibre v5 ではこの記号は `::after` ではなく
+   `summary.maplibregl-ctrl-attrib-button` の background-image で描かれている
+   （実測: ::after 側に背景画像は無い）。単色なので反転でそのまま明色になり、
+   色付きの状態を持たないので副作用も無い。 */
 :root[data-theme='dark'] .maplibregl-ctrl-attrib-button {
   background-color: transparent;
+  filter: invert(1);
 }
 
 :root[data-theme='dark'] .maplibregl-ctrl-scale {

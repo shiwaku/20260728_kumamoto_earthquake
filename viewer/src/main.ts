@@ -6,18 +6,17 @@ import { getBasemapStyle, type Basemap } from './basemap'
 import {
   GROUPS,
   LAYERS,
+  TERRAIN,
   type LayerDef,
-  extrusionUpdates,
   iconsToLoad,
   isExtrudable,
-  isTerrain,
   legendFor,
   mapLayersFor,
   opacityUpdates,
   popupHtml,
-  sliderOf,
   queryableLayerIds,
   sourceFor,
+  terrainSource,
 } from './layers'
 import { applyThemeAttr, initialTheme, type Theme } from './theme'
 import './style.css'
@@ -48,6 +47,9 @@ const map = new maplibregl.Map({
   zoom: INITIAL_ZOOM,
   hash: true,
   attributionControl: false,
+  // 既定は60度。3D地形の起伏や人口の柱を横から見たいので上限まで倒せるようにする
+  // （MapLibre の上限は85度）。
+  maxPitch: 85,
   maxTileCacheSize: isMobile ? 24 : undefined,
   pixelRatio: isMobile ? Math.min(window.devicePixelRatio || 1, 2) : undefined,
 })
@@ -58,6 +60,12 @@ map.addControl(
     trackUserLocation: true,
     showUserLocation: true,
   }),
+  'top-right',
+)
+// 3D地形は MapLibre 標準の TerrainControl（山アイコン）で切り替える。
+// ソースは ensureTerrainSource() で常にスタイルへ入れておく。
+map.addControl(
+  new maplibregl.TerrainControl({ source: TERRAIN.key, exaggeration: TERRAIN.exaggeration }),
   'top-right',
 )
 map.addControl(new maplibregl.ScaleControl(), 'bottom-left')
@@ -125,26 +133,19 @@ function ensureIcons(def: LayerDef): Promise<void> {
   return p
 }
 
-// ---- 立体表示（2D / 3D） ----
-// 立体化できるレイヤーは常に fill-extrusion で載せてあり、2D では高さ0にしている。
-// レイヤー種別を差し替えないので、切替で載せ直す必要がない。
-let is3D = false
-
-function applyExtrusion(def: LayerDef): void {
-  for (const u of extrusionUpdates(def, is3D)) {
-    if (map.getLayer(u.id)) map.setPaintProperty(u.id, u.prop, u.value as never)
-  }
+// ---- 立体表示 ----
+// 立体化するレイヤーは常に fill-extrusion で高さを入れて載せてある。
+// 真上から見ていると高さが分からないので、ONにしたときに水平なら地図を傾ける。
+function tiltForExtrusion(): void {
+  if (map.getPitch() > 0) return
+  map.easeTo({ pitch: map.getTerrain() ? 62 : 48, bearing: -15, duration: 600 })
 }
 
-function setView3D(on: boolean): void {
-  is3D = on
-  // 地形が入っているときは起伏が見えるよう深く倒す
-  const terrainOn = LAYERS.some((l) => isTerrain(l) && l.on)
-  map.easeTo({ pitch: on ? (terrainOn ? 62 : 45) : 0, bearing: on ? -15 : 0, duration: 600 })
-  for (const def of LAYERS) {
-    if (isExtrudable(def)) applyExtrusion(def)
-  }
-  viewCtrl.sync()
+// ---- 3D地形のソース ----
+// TerrainControl は setTerrain するだけなので、ソースは常に用意しておく。
+// raster-dem は terrain が無効な間タイルを取りに行かないので、置いておく分の負荷は無い。
+function ensureTerrainSource(): void {
+  if (!map.getSource(TERRAIN.key)) map.addSource(TERRAIN.key, terrainSource())
 }
 
 // ---- 重なり順 ----
@@ -161,14 +162,6 @@ function beforeIdFor(def: LayerDef): string | undefined {
 
 function addLayer(def: LayerDef): void {
   if (!map.getSource(def.key)) map.addSource(def.key, sourceFor(def))
-  if (isTerrain(def)) {
-    map.setTerrain({ source: def.key, exaggeration: def.opacity })
-    // 真上から見ていると起伏が分からないので、水平なら 3D 表示に切り替える。
-    // 独自に easeTo せず setView3D を通すのは、右下の 2D/3D ボタンの表示と
-    // 実際の傾きが食い違わないようにするため。
-    if (!is3D) setView3D(true)
-    return
-  }
   const specs = mapLayersFor(def)
   if (specs.every((s) => map.getLayer(s.id))) return
   const before = beforeIdFor(def)
@@ -176,8 +169,8 @@ function addLayer(def: LayerDef): void {
     if (map.getLayer(spec.id)) continue
     map.addLayer(spec, before)
   }
-  // 3D 表示中に後から ON にされたレイヤーにも高さを効かせる
-  if (is3D) applyExtrusion(def)
+  // 立体表示のレイヤーは、傾けないと高さが見えない
+  if (isExtrudable(def)) tiltForExtrusion()
 }
 
 function ensureLayer(def: LayerDef): void {
@@ -193,8 +186,6 @@ function ensureLayer(def: LayerDef): void {
 }
 
 function removeLayer(def: LayerDef): void {
-  // 地形は setTerrain を外してからでないとソースを消せない
-  if (isTerrain(def) && map.getTerrain()) map.setTerrain(null)
   for (const spec of mapLayersFor(def)) {
     if (map.getLayer(spec.id)) map.removeLayer(spec.id)
   }
@@ -217,8 +208,14 @@ const renderThemeBtn = (): void => {
 // ラスタ（写真）↔ベクタ（淡色）の切替は diff 適用が効かないため完全再構築する。
 // setStyle 直後は isStyleLoaded() が旧スタイルで true を返すため idle を待つ。
 function reloadStyle(): void {
+  // スタイルを差し替えるとソースも terrain も消えるので、状態を覚えて戻す
+  const terrainWasOn = !!map.getTerrain()
   map.setStyle(getBasemapStyle(base, theme), { diff: false })
-  map.once('idle', () => addDataLayers())
+  map.once('idle', () => {
+    ensureTerrainSource()
+    if (terrainWasOn) map.setTerrain({ source: TERRAIN.key, exaggeration: TERRAIN.exaggeration })
+    addDataLayers()
+  })
 }
 themeBtn.addEventListener('click', () => {
   theme = theme === 'dark' ? 'light' : 'dark'
@@ -307,23 +304,19 @@ function buildPanel(): void {
       const opac = document.createElement('div')
       opac.className = 'layer-opacity'
       opac.hidden = !def.on
-      const sl = sliderOf(def)
-      const fmt = (v: number): string =>
-        sl.scale === 1 ? `${v.toFixed(1)}${sl.suffix}` : `${Math.round(v * sl.scale)}${sl.suffix}`
       const range = document.createElement('input')
       range.type = 'range'
-      range.min = String(sl.min)
-      range.max = String(sl.max)
-      range.step = String(sl.step)
+      range.min = '0'
+      range.max = '1'
+      range.step = '0.05'
       range.value = String(def.opacity)
-      range.setAttribute('aria-label', `${def.name}の${sl.label}`)
-      range.title = sl.label
+      range.setAttribute('aria-label', `${def.name}の不透明度`)
       const val = document.createElement('span')
       val.className = 'op-val'
-      val.textContent = fmt(def.opacity)
+      val.textContent = `${Math.round(def.opacity * 100)}%`
       range.addEventListener('input', () => {
         const v = Number(range.value)
-        val.textContent = fmt(v)
+        val.textContent = `${Math.round(v * 100)}%`
         setLayerOpacity(def, v)
       })
       opac.append(range, val)
@@ -351,11 +344,6 @@ function setLayerVisible(def: LayerDef, on: boolean): void {
 
 function setLayerOpacity(def: LayerDef, v: number): void {
   def.opacity = v
-  if (isTerrain(def)) {
-    // 地形は paint ではなく setTerrain の exaggeration
-    if (map.getTerrain()) map.setTerrain({ source: def.key, exaggeration: v })
-    return
-  }
   for (const u of opacityUpdates(def, v)) {
     if (map.getLayer(u.id)) map.setPaintProperty(u.id, u.prop, u.value as never)
   }
@@ -405,38 +393,7 @@ class BasemapControl implements maplibregl.IControl {
 const basemapCtrl = new BasemapControl()
 map.addControl(basemapCtrl, 'bottom-right')
 
-// ---- 2D / 3D スイッチャー（右下） ----
-// 立体化できるレイヤーが1つも無いときは意味がないので出さない。
-class ViewControl implements maplibregl.IControl {
-  private el!: HTMLElement
-  onAdd(): HTMLElement {
-    this.el = document.createElement('div')
-    this.el.className = 'maplibregl-ctrl basemap-switch view-switch'
-    for (const [on, label] of [
-      [false, '2D'],
-      [true, '3D'],
-    ] as [boolean, string][]) {
-      const btn = document.createElement('button')
-      btn.type = 'button'
-      btn.textContent = label
-      btn.dataset.view = String(on)
-      btn.setAttribute('aria-selected', String(on === is3D))
-      btn.addEventListener('click', () => setView3D(on))
-      this.el.append(btn)
-    }
-    return this.el
-  }
-  onRemove(): void {
-    this.el.remove()
-  }
-  sync(): void {
-    for (const btn of this.el.querySelectorAll<HTMLButtonElement>('button')) {
-      btn.setAttribute('aria-selected', String((btn.dataset.view === 'true') === is3D))
-    }
-  }
-}
-const viewCtrl = new ViewControl()
-if (LAYERS.some(isExtrudable)) map.addControl(viewCtrl, 'bottom-right')
+
 
 function setBase(next: Basemap): void {
   if (next === base) return
@@ -494,7 +451,10 @@ renderThemeBtn()
 buildPanel()
 if (isMobile) panel.classList.add('collapsed')
 renderCollapseBtn()
-map.on('load', addDataLayers)
+map.on('load', () => {
+  ensureTerrainSource()
+  addDataLayers()
+})
 initHud()
 
 // WebGL コンテキスト消失からの復帰（iOS Safari 等でメモリ逼迫時に起きる）
@@ -512,8 +472,15 @@ canvas.addEventListener(
   () => {
     diag('WebGL context restored → relayering')
     iconPromises.clear()
-    if (map.isStyleLoaded()) addDataLayers()
-    else map.once('idle', addDataLayers)
+    if (map.isStyleLoaded()) {
+      ensureTerrainSource()
+      addDataLayers()
+    } else {
+      map.once('idle', () => {
+        ensureTerrainSource()
+        addDataLayers()
+      })
+    }
   },
   false,
 )
