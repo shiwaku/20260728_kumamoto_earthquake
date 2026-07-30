@@ -17,14 +17,12 @@ import {
 import { applyThemeAttr, initialTheme, type Theme } from './theme'
 import './style.css'
 
-/** 震央（気象庁 暫定値）: 2026/07/28 16:27 熊本県熊本地方 深さ16km M7.1 */
-const EPICENTER: [number, number] = [130.65, 32.61]
 /**
- * 初期表示。撮影・判読範囲（八代地区、実測 bbox 130.431-130.771E / 32.244-32.589N）と
- * 震央の両方が視野に入る位置・縮尺にしてある。
+ * 初期表示。既定で ON のレイヤー（震源・推計震度分布・主要活断層帯）が
+ * まとめて見える広さにしてある。八代地区の空中写真もこの範囲に収まる。
  */
-const INITIAL_CENTER: [number, number] = [130.62, 32.46]
-const INITIAL_ZOOM = 10.6
+const INITIAL_CENTER: [number, number] = [130.7, 32.55]
+const INITIAL_ZOOM = 9.3
 
 let theme: Theme = initialTheme()
 let base: Basemap = 'pale'
@@ -124,14 +122,14 @@ function ensureIcons(def: LayerDef): Promise<void> {
 
 // ---- 重なり順 ----
 // z が大きいほど前面。自分より z が大きい既存レイヤーのうち最小のものの直前に挿入する。
-// 該当が無ければ震央マーカーの直前＝データ層の最前面に置く（震央は常に最上位）。
+// 震源レイヤーは z=1000 なので、常に最前面に留まる。
 function beforeIdFor(def: LayerDef): string | undefined {
   const above = LAYERS.filter((l) => l.z > def.z).sort((a, b) => a.z - b.z)
   for (const l of above) {
     const first = mapLayersFor(l)[0]?.id
     if (first && map.getLayer(first)) return first
   }
-  return map.getLayer(EPI_LAYER) ? EPI_LAYER : undefined
+  return undefined
 }
 
 function addLayer(def: LayerDef): void {
@@ -181,10 +179,7 @@ const renderThemeBtn = (): void => {
 // setStyle 直後は isStyleLoaded() が旧スタイルで true を返すため idle を待つ。
 function reloadStyle(): void {
   map.setStyle(getBasemapStyle(base, theme), { diff: false })
-  map.once('idle', () => {
-    addDataLayers()
-    ensureEpicenter()
-  })
+  map.once('idle', () => addDataLayers())
 }
 themeBtn.addEventListener('click', () => {
   theme = theme === 'dark' ? 'light' : 'dark'
@@ -202,50 +197,6 @@ collapseBtn.addEventListener('click', () => {
   panel.classList.toggle('collapsed')
   renderCollapseBtn()
 })
-
-// ---- 震央マーカー ----
-// 記号はフォント（グリフ）に依存させず circle で描く。
-// text-field で ✕ を出す実装では、地理院のグリフに当該文字が無く描画されなかった。
-const EPI_SRC = 'epicenter'
-const EPI_LAYER = 'epicenter--halo'
-const EPI_DOT = 'epicenter--dot'
-function ensureEpicenter(): void {
-  if (!map.getSource(EPI_SRC)) {
-    map.addSource(EPI_SRC, {
-      type: 'geojson',
-      data: {
-        type: 'FeatureCollection',
-        features: [{ type: 'Feature', geometry: { type: 'Point', coordinates: EPICENTER }, properties: {} }],
-      },
-    })
-  }
-  // 常に最前面に置き直す
-  for (const id of [EPI_LAYER, EPI_DOT]) {
-    if (map.getLayer(id)) map.removeLayer(id)
-  }
-  map.addLayer({
-    id: EPI_LAYER,
-    type: 'circle',
-    source: EPI_SRC,
-    paint: {
-      'circle-radius': 11,
-      'circle-color': 'rgba(210,0,40,0.18)',
-      'circle-stroke-color': 'rgba(255,255,255,0.95)',
-      'circle-stroke-width': 2,
-    },
-  })
-  map.addLayer({
-    id: EPI_DOT,
-    type: 'circle',
-    source: EPI_SRC,
-    paint: {
-      'circle-radius': 5,
-      'circle-color': 'rgba(210,0,40,1)',
-      'circle-stroke-color': 'rgba(255,255,255,0.95)',
-      'circle-stroke-width': 1.5,
-    },
-  })
-}
 
 // ---- レイヤーパネル ----
 const layersDiv = document.getElementById('layers') as HTMLElement
@@ -431,7 +382,11 @@ map.on('click', (e) => {
   const ids = activeQueryIds()
   const feats = ids.length ? map.queryRenderedFeatures(e.point, { layers: ids }) : []
   if (!feats.length) return
-  const f = feats[0]
+  // 中身のある地物を優先する。主要活断層帯のように、線には属性が無く
+  // 名称は不可視ポリゴン側にしか無いデータがあるため、先頭決め打ちだと空のポップアップになる。
+  const hasContent = (x: maplibregl.MapGeoJSONFeature): boolean =>
+    Object.entries(x.properties ?? {}).some(([k, v]) => !k.startsWith('_') && v !== null && v !== '')
+  const f = feats.find(hasContent) ?? feats[0]
   const key = f.layer.id.split('--')[0]
   const def = LAYERS.find((l) => l.key === key)
   if (!def) return
@@ -457,10 +412,7 @@ renderThemeBtn()
 buildPanel()
 if (isMobile) panel.classList.add('collapsed')
 renderCollapseBtn()
-map.on('load', () => {
-  addDataLayers()
-  ensureEpicenter()
-})
+map.on('load', addDataLayers)
 initHud()
 
 // WebGL コンテキスト消失からの復帰（iOS Safari 等でメモリ逼迫時に起きる）
@@ -478,15 +430,8 @@ canvas.addEventListener(
   () => {
     diag('WebGL context restored → relayering')
     iconPromises.clear()
-    if (map.isStyleLoaded()) {
-      addDataLayers()
-      ensureEpicenter()
-    } else {
-      map.once('idle', () => {
-        addDataLayers()
-        ensureEpicenter()
-      })
-    }
+    if (map.isStyleLoaded()) addDataLayers()
+    else map.once('idle', addDataLayers)
   },
   false,
 )

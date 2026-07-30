@@ -4,14 +4,16 @@
 
 ## 収録レイヤー
 
-| グループ | レイヤー | 形式 | 出典 |
-| --- | --- | --- | --- |
-| 揺れ | 推計震度分布（250mメッシュ） | ラスタタイル（同梱） | 防災科研 J-RISQ地震速報 |
-| 被害状況 | 斜面崩壊・土石流・堆積分布 | GeoJSON | 国土地理院 |
-| 空中写真 | 正射画像（速報）八代地区 7/29撮影 | ラスタタイル | 国土地理院 |
-| 空中写真 | 垂直写真（速報）八代地区 7/29撮影 | GeoJSON（点・513枚） | 国土地理院 |
-| 空中写真 | 斜め写真 八代地区 7/29撮影 | GeoJSON（点・567枚） | 国土地理院 |
-| 地形・活断層 | 活断層図（都市圏活断層図） | ラスタタイル | 国土地理院 |
+| グループ | レイヤー | 形式 | 出典 | 既定 |
+| --- | --- | --- | --- | --- |
+| 震源・揺れ | 震源（震央） | GeoJSON（点） | 気象庁 | ON |
+| 震源・揺れ | 推計震度分布（250mメッシュ） | ラスタタイル（同梱） | 防災科研 J-RISQ地震速報 | ON |
+| 被害状況 | 斜面崩壊・土石流・堆積分布 | GeoJSON（21面） | 国土地理院 | |
+| 空中写真 | 正射画像（速報）八代地区 7/29撮影 | ラスタタイル | 国土地理院 | |
+| 空中写真 | 垂直写真（速報）八代地区 7/29撮影 | GeoJSON（点・513枚） | 国土地理院 | |
+| 空中写真 | 斜め写真 八代地区 7/29撮影 | GeoJSON（点・567枚） | 国土地理院 | |
+| 地形・活断層 | 全国の主要活断層帯 | GeoJSON（同梱・3,248地物） | 地震調査研究推進本部 | ON |
+| 地形・活断層 | 活断層図（都市圏活断層図） | ラスタタイル | 国土地理院 | |
 
 背景地図は国土地理院の**最適化ベクトルタイル**（淡色。ダークテーマは明度反転で生成）と**全国最新写真**を切り替えられる。
 
@@ -21,6 +23,8 @@
   レイヤーの URL・ズーム範囲は地理院地図のレイヤー定義 `https://maps.gsi.go.jp/layers_txt/layers_20260729kumamoto.txt` に準拠。
 - 防災科学技術研究所「[J-RISQ地震速報](https://www.j-risq.bosai.go.jp/)」
   レポート `R-20260728162724-0145-00001`（2026/07/28 16:40:13発表 Ver.8 最終報）。
+- 地震調査研究推進本部「全国の主要活断層帯」
+  地理院地図のレイヤー `active_fault_jishinhonbu`（`https://maps.gsi.go.jp/xyz/active_fault/2/3/1.geojson`）。
 
 ## セットアップ
 
@@ -45,9 +49,15 @@ Vite の `base` は `'./'` にしてあるため、プロジェクトページ�
 
 対応している `kind`:
 
-- `raster` … XYZ ラスタタイル（地理院タイル等）
+- `raster` … XYZ ラスタタイル（地理院タイル等）。`bounds` を書くと範囲外を取りに行かない
 - `wms` … `{bbox-epsg-3857}` を使った WMS（[MapLibre の作法](https://maplibre.org/maplibre-gl-js/docs/examples/add-a-wms-source/)どおり。**ただし CORS を返すサーバに限る**）
-- `geojson` … `render: 'polygon'` / `render: 'point'`
+- `geojson` … `render: 'polygon'`（面。LineString が混在していても線として描かれる）/
+  `render: 'point'`（`icons` でアイコン画像、`circle` で円マーカー。`data` は URL でもインラインの
+  FeatureCollection でもよい）
+
+ポップアップは `popup` で組み立てる。`title` にタイトルへ使う属性、`rows` に出す属性の順序、
+`labels` に見出しの読み替え、`html` にエスケープせず埋め込む属性（地理院の写真レイヤーは
+属性値そのものが `<img>` を含む HTML）を書く。
 
 `z` が重なり順（大きいほど前面）、`group` がパネルの見出し。凡例は `legend`（色と label の配列）か
 `legendImage`（配布されている凡例画像の URL）で与える。
@@ -86,19 +96,43 @@ python3 tools/fetch_jrisq_tiles.py --triggerid R-... --report 0145 --ana 00001
   気象庁の震度配色とは別の独自パレットなので、`layers.ts` の `SHINDO_LEGEND` に実測値を持っている
 
 なお国土地理院のタイル・GeoJSON は `Access-Control-Allow-Origin: *` を返すため、
-こちらは取り込みせず実行時に直接参照している。
+こちらは基本的に取り込みせず実行時に直接参照している（例外は次項）。
+
+## 主要活断層帯を圧縮して同梱している理由
+
+配信元 `https://maps.gsi.go.jp/xyz/active_fault/2/3/1.geojson` は CORS を返すので直接参照もできる。
+ただしこのファイルはインデント付きで **2.36MB あり、しかも配信側が gzip を返さない**。
+レイヤーを ON にするたび 2.36MB を素で転送することになるため、座標を5桁（約1m）に丸めた
+compact JSON にして同梱している。GitHub Pages は静的ファイルを圧縮して返すので、
+実転送量は **約160KB**（元の1/14）に収まる。災害時に配信元が重い場合でも表示できる利点もある。
+
+```sh
+python3 tools/build_active_fault.py                    # 配信元から取得して生成
+python3 tools/build_active_fault.py --input raw/gsi/active_fault_jishinhonbu.geojson
+```
+
+データの構造には癖がある。
+
+- LineString 3,085本 … 断層線本体（`_color: #3388ff` / `_weight: 3`）。**属性に名称を持たない**
+- Polygon 163面 … 断層帯の名称を持つ**不可視**の領域（`_opacity: 0` / `_fillOpacity: 0`）。
+  地理院地図ではクリックして名称を出すための当たり判定として使われている。
+  `name`（135種）と `description`（55種）はこちらにしか無い
+
+そのため、クリック時は「`_` 始まり以外の属性を持つ地物」を優先して選ぶようにしている
+（先頭決め打ちだと、線に当たったときに空のポップアップになる）。
 
 ## リポジトリ構成
 
 ```
 .github/workflows/deploy.yml   GitHub Pages へのデプロイ
-raw/                           取得した原本（J-RISQ の KML など）
+raw/                           取得した原本（J-RISQ の KML、主要活断層帯の GeoJSON）
 tools/fetch_jrisq_tiles.py     J-RISQ の WMS → 静的 XYZ タイル
+tools/build_active_fault.py    主要活断層帯 GeoJSON の圧縮
 tools/make_icons.py            ファビコン・アプリアイコンの生成
 viewer/src/layers.ts           レイヤーレジストリ（ここに足す）
 viewer/src/main.ts             kind を見てレイヤーを載せる汎用エンジン
 viewer/src/basemap.ts          背景地図（淡色ベクター／写真、ダークは明度反転）
-viewer/public/data/            同梱データ（推計震度タイル）
+viewer/public/data/            同梱データ（推計震度タイル、主要活断層帯）
 ```
 
 ## 未対応（今後）

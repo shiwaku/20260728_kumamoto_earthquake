@@ -1,3 +1,4 @@
+import type { FeatureCollection } from 'geojson'
 import type {
   CircleLayerSpecification,
   ExpressionSpecification,
@@ -26,6 +27,12 @@ const GSI_ATTR =
   '<a href="https://www.gsi.go.jp/BOUSAI/20260728_kumamoto_earthquake.html" target="_blank" rel="noopener">国土地理院</a>'
 const NIED_ATTR =
   '<a href="https://www.j-risq.bosai.go.jp/" target="_blank" rel="noopener">防災科学技術研究所 J-RISQ地震速報</a>'
+const JMA_ATTR = '<a href="https://www.jma.go.jp/" target="_blank" rel="noopener">気象庁</a>'
+const HERP_ATTR =
+  '<a href="https://www.jishin.go.jp/main/oshirase/20260728_kumamoto.html" target="_blank" rel="noopener">地震調査研究推進本部</a>'
+
+/** 震央（気象庁 暫定値）: 2026/07/28 16:27 熊本県熊本地方 深さ16km M7.1 */
+export const EPICENTER: [number, number] = [130.65, 32.61]
 
 // ---- 凡例 ----
 export interface LegendItem {
@@ -102,35 +109,54 @@ interface PopupSpec {
    * エスケープせずそのまま埋め込む必要がある。
    */
   html?: string[]
+  /** 属性名の表示ラベル。配信データのキーがローマ字のときに読める見出しへ差し替える。 */
+  labels?: Record<string, string>
 }
 
-/** GeoJSON（面） */
+/** GeoJSON ソースの中身。URL か、インラインの FeatureCollection。 */
+type GeoJsonData = string | FeatureCollection
+
+/** GeoJSON（面。LineString が混在していても線として描かれる） */
 interface GeoJsonPolygonDef extends LayerBase {
   kind: 'geojson'
   render: 'polygon'
-  data: string
+  data: GeoJsonData
   minzoom?: number
   maxzoom?: number
   popup?: PopupSpec
 }
 
-/** GeoJSON（点・アイコン） */
+/** 円マーカーの見た目 */
+interface CircleSpec {
+  radius: number
+  color: string
+  strokeColor?: string
+  strokeWidth?: number
+}
+
+/** GeoJSON（点。アイコン画像か円マーカーで描く） */
 interface GeoJsonPointDef extends LayerBase {
   kind: 'geojson'
   render: 'point'
-  data: string
+  data: GeoJsonData
   minzoom?: number
   maxzoom?: number
   popup?: PopupSpec
   /**
    * アイコン画像。キーは地物の `_iconUrl` の値そのまま、値は MapLibre に登録する image id。
    * `_iconUrl` は http:// で配信されている場合があるため、読み込み時に https へ寄せる。
+   * 省略すると circle だけで描く（フォントにもスプライトにも依存しない）。
    */
-  icons: Record<string, string>
+  icons?: Record<string, string>
   /** icons に一致しなかったときに使う image id */
-  iconFallback: string
+  iconFallback?: string
   /** アイコンの表示倍率 */
   iconSize?: number
+  /**
+   * 円マーカー。配列の先頭が最背面。
+   * 省略時、icons があれば読み込み失敗時の下敷きとして既定の円を1枚置く。
+   */
+  circle?: CircleSpec[]
 }
 
 export type LayerDef = RasterDef | WmsDef | GeoJsonPolygonDef | GeoJsonPointDef
@@ -222,13 +248,51 @@ const SUICHOKU_ICONS: Record<string, string> = {
  * 地図の重なり順は z（大きいほど前面）で決まる。
  */
 export const LAYERS: LayerDef[] = [
-  // ===== 揺れ =====
+  // ===== 震源・揺れ =====
+  {
+    kind: 'geojson',
+    render: 'point',
+    key: 'epicenter',
+    name: '震源（震央）',
+    group: '震源・揺れ',
+    on: true,
+    opacity: 1,
+    // 他のどのレイヤーよりも前面に置く
+    z: 1000,
+    data: {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: { type: 'Point', coordinates: EPICENTER },
+          properties: {
+            発生日時: '2026年7月28日 16時27分頃',
+            震央地名: '熊本県熊本地方',
+            深さ: '16km',
+            規模: 'M7.1（気象庁マグニチュード、暫定値）',
+            最大震度: '7（宇城市・氷川町）',
+            震源断層: '日奈久断層帯（高野－白旗区間・日奈久区間）沿い、長さ約30km',
+          },
+        },
+      ],
+    },
+    // フォント（グリフ）に依存させないため、記号ではなく円2枚で描く。
+    circle: [
+      { radius: 11, color: 'rgba(210,0,40,0.18)', strokeColor: 'rgba(255,255,255,0.95)', strokeWidth: 2 },
+      { radius: 5, color: 'rgba(210,0,40,1)', strokeColor: 'rgba(255,255,255,0.95)', strokeWidth: 1.5 },
+    ],
+    legend: [{ label: '震央', color: '#d20028', shape: 'dot' }],
+    attribution: JMA_ATTR,
+    desc:
+      '気象庁が発表した震央の位置（暫定値）。2026年7月28日16時27分頃、熊本県熊本地方の深さ16kmで M7.1。' +
+      '最大震度7を宇城市と氷川町で観測した。震源断層は日奈久断層帯に沿って長さ約30km。',
+  },
   {
     kind: 'raster',
     key: 'jrisq-shindo',
     name: '推計震度分布（250mメッシュ）',
-    group: '揺れ',
-    on: false,
+    group: '震源・揺れ',
+    on: true,
     opacity: 0.65,
     z: 10,
     // J-RISQ の WMS は CORS ヘッダーを返さないため、GitHub Pages から直接は読めない。
@@ -254,7 +318,7 @@ export const LAYERS: LayerDef[] = [
     key: 'syamen',
     name: '斜面崩壊・土石流・堆積分布',
     group: '被害状況',
-    on: true,
+    on: false,
     opacity: 1,
     z: 40,
     // 地理院地図の cocotile 方式（maxNativeZoom=2）のため、
@@ -274,7 +338,7 @@ export const LAYERS: LayerDef[] = [
     key: 'ortho',
     name: '正射画像（速報）八代地区 7/29撮影',
     group: '空中写真',
-    on: true,
+    on: false,
     opacity: 1,
     z: 20,
     tiles: ['https://maps.gsi.go.jp/xyz/20260729kumamoto_yatsushiro_0729do_sokuho/{z}/{x}/{y}.png'],
@@ -328,6 +392,30 @@ export const LAYERS: LayerDef[] = [
 
   // ===== 地形・活断層 =====
   {
+    kind: 'geojson',
+    render: 'polygon',
+    key: 'active-fault',
+    name: '全国の主要活断層帯',
+    group: '地形・活断層',
+    on: true,
+    opacity: 1,
+    z: 32,
+    // 配信元 https://maps.gsi.go.jp/xyz/active_fault/2/3/1.geojson は CORS を返すので
+    // 直接参照もできるが、整形済み2.36MBで gzip も返らないため圧縮して同梱している。
+    // 生成は tools/build_active_fault.py。
+    data: `${import.meta.env.BASE_URL}data/herp/active_fault.geojson`,
+    legend: [{ label: '主要活断層帯', color: '#3388ff', shape: 'line' }],
+    attribution: HERP_ATTR,
+    // 名称・説明は断層線ではなく、名称表示用の不可視ポリゴン（163面）側が持っている。
+    // 名称はタイトルに出るので、表には description（区間名や評価上の注記）だけ出す。
+    popup: { title: 'name', rows: ['description'], html: ['description'], labels: { description: '備考' } },
+    desc:
+      '地震調査研究推進本部が長期評価の対象としている全国の主要活断層帯。' +
+      '本地震で活動したとみられる日奈久断層帯も含む。断層線をクリックしても名称は出ず、' +
+      '断層帯の範囲（名称表示用の不可視の領域）をクリックすると名称と評価の説明が出る。' +
+      '全国規模のデータなので、拡大して詳細な位置を見るときは「活断層図（都市圏活断層図）」を使う。',
+  },
+  {
     kind: 'raster',
     key: 'afm',
     name: '活断層図（都市圏活断層図）',
@@ -346,7 +434,7 @@ export const LAYERS: LayerDef[] = [
 ]
 
 /** パネルに出すグループの順序。LAYERS に無いグループは無視される。 */
-export const GROUPS = ['揺れ', '被害状況', '空中写真', '地形・活断層'] as const
+export const GROUPS = ['震源・揺れ', '被害状況', '空中写真', '地形・活断層'] as const
 
 export const layerById = (key: string): LayerDef | undefined => LAYERS.find((l) => l.key === key)
 
@@ -428,40 +516,56 @@ export function mapLayersFor(def: LayerDef): LayerSpecification[] {
   }
 
   // point
-  const iconExpr = (): ExpressionSpecification => {
+  const layers: LayerSpecification[] = []
+  for (const [i, c] of circleSpecs(def).entries()) {
+    const circle: CircleLayerSpecification = {
+      id: circleId(src, i),
+      type: 'circle',
+      source: src,
+      ...zoom,
+      paint: {
+        'circle-radius': c.radius,
+        'circle-color': c.color,
+        'circle-stroke-color': c.strokeColor ?? 'rgba(0,0,0,0)',
+        'circle-stroke-width': c.strokeWidth ?? 0,
+        'circle-opacity': def.opacity,
+        'circle-stroke-opacity': def.opacity,
+      },
+    }
+    layers.push(circle)
+  }
+  if (def.icons && def.iconFallback) {
     const cases: string[] = []
     for (const [url, id] of Object.entries(def.icons)) cases.push(url, id)
-    return ['match', ['coalesce', ['get', '_iconUrl'], ''], ...cases, def.iconFallback] as unknown as ExpressionSpecification
+    const iconExpr = ['match', ['coalesce', ['get', '_iconUrl'], ''], ...cases, def.iconFallback]
+    const sym: SymbolLayerSpecification = {
+      id: `${src}--icon`,
+      type: 'symbol',
+      source: src,
+      ...zoom,
+      layout: {
+        'icon-image': iconExpr as unknown as ExpressionSpecification,
+        'icon-size': def.iconSize ?? 1,
+        'icon-allow-overlap': true,
+        'icon-ignore-placement': true,
+      },
+      paint: { 'icon-opacity': def.opacity },
+    }
+    layers.push(sym)
   }
-  // アイコン画像の読み込みに失敗しても位置が分かるよう、円を下敷きに置く。
-  const halo: CircleLayerSpecification = {
-    id: `${src}--halo`,
-    type: 'circle',
-    source: src,
-    ...zoom,
-    paint: {
-      'circle-radius': 5,
-      'circle-color': 'rgba(255,255,255,0.9)',
-      'circle-stroke-color': 'rgba(0,90,200,0.9)',
-      'circle-stroke-width': 1,
-      'circle-opacity': def.opacity,
-      'circle-stroke-opacity': def.opacity,
-    },
-  }
-  const sym: SymbolLayerSpecification = {
-    id: `${src}--icon`,
-    type: 'symbol',
-    source: src,
-    ...zoom,
-    layout: {
-      'icon-image': iconExpr(),
-      'icon-size': def.iconSize ?? 1,
-      'icon-allow-overlap': true,
-      'icon-ignore-placement': true,
-    },
-    paint: { 'icon-opacity': def.opacity },
-  }
-  return [halo, sym]
+  return layers
+}
+
+const circleId = (src: string, i: number): string => `${src}--c${i}`
+
+/**
+ * 点レイヤーの円マーカー。
+ * circle 指定があればそれを使い、無ければアイコンの下敷き用に既定の円を1枚返す
+ * （アイコン画像の読み込みに失敗しても位置が分かるようにするため）。
+ */
+function circleSpecs(def: GeoJsonPointDef): CircleSpec[] {
+  if (def.circle?.length) return def.circle
+  return [{ radius: 5, color: 'rgba(255,255,255,0.9)', strokeColor: 'rgba(0,90,200,0.9)', strokeWidth: 1 }]
 }
 
 /** 不透明度スライダーの反映。レイヤー種別ごとに効かせる paint プロパティが違う。 */
@@ -476,22 +580,25 @@ export function opacityUpdates(def: LayerDef, v: number): { id: string; prop: st
       { id: `${src}--line`, prop: 'line-opacity', value: lineOpacityExpr(v) },
     ]
   }
-  return [
-    { id: `${src}--halo`, prop: 'circle-opacity', value: v },
-    { id: `${src}--halo`, prop: 'circle-stroke-opacity', value: v },
-    { id: `${src}--icon`, prop: 'icon-opacity', value: v },
-  ]
+  const out = circleSpecs(def).flatMap((_, i) => [
+    { id: circleId(src, i), prop: 'circle-opacity', value: v },
+    { id: circleId(src, i), prop: 'circle-stroke-opacity', value: v },
+  ])
+  if (def.icons) out.push({ id: `${src}--icon`, prop: 'icon-opacity', value: v })
+  return out
 }
 
 /** クリック判定に使うレイヤー id（ラスタは対象外）。 */
 export function queryableLayerIds(def: LayerDef): string[] {
   if (def.kind === 'raster' || def.kind === 'wms') return []
-  return def.render === 'polygon' ? [`${def.key}--fill`, `${def.key}--line`] : [`${def.key}--icon`, `${def.key}--halo`]
+  if (def.render === 'polygon') return [`${def.key}--fill`, `${def.key}--line`]
+  const ids = circleSpecs(def).map((_, i) => circleId(def.key, i))
+  return def.icons ? [`${def.key}--icon`, ...ids] : ids
 }
 
 /** 事前に map.addImage で登録しておくアイコン。http は https に寄せる。 */
 export function iconsToLoad(def: LayerDef): { id: string; url: string }[] {
-  if (def.kind !== 'geojson' || def.render !== 'point') return []
+  if (def.kind !== 'geojson' || def.render !== 'point' || !def.icons) return []
   const seen = new Map<string, string>()
   for (const [url, id] of Object.entries(def.icons)) {
     if (!seen.has(id)) seen.set(id, url.replace(/^http:\/\//, 'https://'))
@@ -522,7 +629,8 @@ export function popupHtml(def: LayerDef, props: Record<string, unknown>): string
     })
     .map((k) => {
       const v = String(props[k])
-      return `<dt>${esc(k)}</dt><dd>${rawHtml.has(k) ? v : esc(v)}</dd>`
+      const label = spec?.labels?.[k] ?? k
+      return `<dt>${esc(label)}</dt><dd>${rawHtml.has(k) ? v : esc(v)}</dd>`
     })
     .join('')
 
