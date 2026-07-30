@@ -2,6 +2,7 @@ import type { FeatureCollection } from 'geojson'
 import type {
   CircleLayerSpecification,
   ExpressionSpecification,
+  FillExtrusionLayerSpecification,
   FillLayerSpecification,
   LayerSpecification,
   LineLayerSpecification,
@@ -25,8 +26,6 @@ import type {
 // ---- 出典 ----
 const GSI_ATTR =
   '<a href="https://www.gsi.go.jp/BOUSAI/20260728_kumamoto_earthquake.html" target="_blank" rel="noopener">国土地理院</a>'
-const NIED_ATTR =
-  '<a href="https://www.j-risq.bosai.go.jp/" target="_blank" rel="noopener">防災科学技術研究所 J-RISQ地震速報</a>'
 const JMA_ATTR = '<a href="https://www.jma.go.jp/" target="_blank" rel="noopener">気象庁</a>'
 const ESTAT_ATTR =
   '<a href="https://www.e-stat.go.jp/gis" target="_blank" rel="noopener">国勢調査2020 125mメッシュ（総務省統計局／e-Stat）</a>'
@@ -119,6 +118,16 @@ interface ChoroplethDef extends LayerBase {
   minzoom?: number
   maxzoom?: number
   popup?: PopupSpec
+  /**
+   * 立体表示（3D）の設定。指定すると fill ではなく fill-extrusion で描く。
+   * 2D のときは高さ 0 のままなので、見た目は塗りと変わらない。
+   */
+  extrude?: {
+    /** 高さに使う属性。省略時は prop と同じ。 */
+    prop?: string
+    /** 属性値1あたりの高さ（m） */
+    metersPerUnit: number
+  }
 }
 
 /** ポップアップの組み立て方 */
@@ -185,66 +194,21 @@ interface GeoJsonPointDef extends LayerBase {
 
 export type LayerDef = RasterDef | WmsDef | GeoJsonPolygonDef | GeoJsonPointDef | ChoroplethDef
 
-// ---- 防災科研 J-RISQ 推計震度分布 ----
+// ---- 気象庁 推計震度分布図（250mメッシュ） ----
 /**
- * 対象レポート。J-RISQ は同一地震に対して速報→最終報と複数の報を出すため、
- * 差し替えるときはここだけ変える。
- * R-20260728162724-0145-00001 = 2026/07/28 16:40:13 発表（Ver.8 最終報）。
- */
-const JRISQ_REPORT = { triggerid: 'R-20260728162724', report: '0145', ana: '00001' }
-
-/**
- * J-RISQ の WMS GetMap URL を組み立てる。
- * bbox は MapLibre がタイルごとに置換するプレースホルダなので、
- * URLSearchParams にかけて `{` `}` をエスケープされないよう後ろに直接つなぐ。
- */
-export function jrisqWms(wmsLayer: string): string {
-  const q = new URLSearchParams({
-    service: 'WMS',
-    version: '1.1.1',
-    request: 'GetMap',
-    layers: wmsLayer,
-    srs: 'EPSG:3857',
-    width: '256',
-    height: '256',
-    transparent: 'true',
-    format: 'image/png',
-    ...JRISQ_REPORT,
-  })
-  return `https://www.j-risq.bosai.go.jp/report/wms?${q.toString()}&bbox={bbox-epsg-3857}`
-}
-
-/**
- * 推計震度分布の WMS 直参照 URL（本番では使っていない）。
+ * 配色は気象庁の震度階級色。配信 PNG から実測した値をそのまま持つ。
  *
- * MapLibre の WMS の作り方そのものは
- * https://maplibre.org/maplibre-gl-js/docs/examples/add-a-wms-source/ のとおりで、
- * この URL を raster ソースの tiles に渡せば動く形になっている。
- * ただし J-RISQ の WMS は Access-Control-Allow-Origin を返さないため、
- * GitHub Pages のような別オリジンからは全リクエストが遮断される
- * （実測: 90リクエストすべて net::ERR_FAILED）。
- * そのため本番の 'jrisq-shindo' レイヤーは、tools/fetch_jrisq_tiles.py で
- * 焼いた同梱タイルを参照している。CORS を返す WMS を足すときは
- * kind: 'wms' でこの形の URL をそのまま渡せばよい。
- */
-export const JRISQ_WMS_URL = jrisqWms('GSI_M250')
-
-/**
- * 推計震度の配色。J-RISQ の GetLegendGraphic
- * （request=GetLegendGraphic&layer=GSI_M250）の実物から採色した10段階。
- * 気象庁の震度配色とは異なる独自パレットなので、実測値をそのまま持つ。
+ * 画像に描かれているのは**震度4以上だけ**（震度1〜3の公式色
+ * #f2f2ff / #00aaff / #0041ff は1画素も含まれないことを実測で確認）。
+ * 索引 list.json の rank_cnt には震度0〜3のメッシュ数も入っているが、図には出てこない。
  */
 const SHINDO_LEGEND: LegendItem[] = [
-  { label: '推定震度7', color: '#950d05' },
-  { label: '推定震度6強', color: '#f45178' },
-  { label: '推定震度6弱', color: '#faaa46' },
-  { label: '推定震度5強', color: '#f7f618' },
-  { label: '推定震度5弱', color: '#96d050' },
-  { label: '推定震度4', color: '#1e973d' },
-  { label: '推定震度3', color: '#31ada8' },
-  { label: '推定震度2', color: '#447eb8' },
-  { label: '推定震度1', color: '#96b4d3' },
-  { label: '推定震度0', color: '#ffffff', outline: 'rgba(0,0,0,0.5)' },
+  { label: '震度7', color: '#b40068' },
+  { label: '震度6強', color: '#a50021' },
+  { label: '震度6弱', color: '#ff2800' },
+  { label: '震度5強', color: '#ff9900' },
+  { label: '震度5弱', color: '#ffe600' },
+  { label: '震度4', color: '#fae696' },
 ]
 
 // ---- 地理院地図 斜め写真の方向アイコン ----
@@ -313,25 +277,26 @@ export const LAYERS: LayerDef[] = [
   },
   {
     kind: 'raster',
-    key: 'jrisq-shindo',
+    key: 'jma-shindo',
     name: '推計震度分布（250mメッシュ）',
     group: '震源・揺れ',
     on: true,
     opacity: 0.65,
     z: 10,
-    // J-RISQ の WMS は CORS ヘッダーを返さないため、GitHub Pages から直接は読めない。
-    // tools/fetch_jrisq_tiles.py で確定レポートをタイル化して同梱したものを使う。
-    // 経緯は上の JRISQ_WMS_URL のコメントを参照。
-    tiles: [`${import.meta.env.BASE_URL}data/jrisq/GSI_M250/{z}/{x}/{y}.png`],
+    // 気象庁は1次メッシュごとの800×800px PNG で配信している（CORS は * だが、
+    // image ソースで並べると緯度方向に歪むため、GDAL で再投影してタイル化して同梱）。
+    // 生成は tools/fetch_jma_shindo_tiles.py。
+    tiles: [`${import.meta.env.BASE_URL}data/jma_shindo/{z}/{x}/{y}.png`],
     minzoom: 5,
     maxzoom: 11,
     tileSize: 256,
     legend: SHINDO_LEGEND,
-    attribution: NIED_ATTR,
+    attribution: JMA_ATTR,
     desc:
-      '防災科学技術研究所 J-RISQ地震速報による、250mメッシュごとの推計震度。' +
-      '観測点の震度と地盤の増幅特性から推定した値で、実測震度ではない。' +
-      '2026/07/28 16:40:13発表（Ver.8 最終報）。' +
+      '気象庁の推計震度分布図（250mメッシュ）。観測された震度と地盤の増幅特性から推計した値で、実測震度ではない。' +
+      'いずれかの観測点で震度5弱以上を観測したときに、地震発生後15分程度で作成・提供される。' +
+      '2026年7月28日16時27分の本震（M7.1、最大計測震度6.6）のもの。' +
+      '図に塗られているのは震度4以上だけで、震度1〜3の範囲は含まれない。' +
       'z11までのタイルを同梱しており、それ以上のズームは拡大表示になる。',
   },
 
@@ -342,9 +307,11 @@ export const LAYERS: LayerDef[] = [
     name: '夜間人口（国勢調査2020 125mメッシュ）',
     group: '人口',
     on: false,
-    // 階級色のコントラストは不透明度100%で検証しているため、
-    // 下げすぎると設計した段差が背景に溶けて潰れる。基図が読める範囲で高めに取る。
-    opacity: 0.8,
+    // 階級色のコントラストは不透明度100%で検証しているため、下げすぎると
+    // 設計した段差が背景に溶けて潰れる。また 3D では半透明の柱が重なると
+    // 前後が混ざって読めなくなる（MapLibre は半透明の押し出しを深度順に描かない）。
+    // 基図がうっすら見える範囲で高めに取る。
+    opacity: 0.9,
     z: 15,
     url: `${import.meta.env.BASE_URL}data/census/pop_mesh125.pmtiles`,
     sourceLayer: 'pop_mesh',
@@ -365,15 +332,24 @@ export const LAYERS: LayerDef[] = [
      * このランプは明度単調・隣接ΔL・薄端コントラスト・単一色相の4項目すべてを満たし、
      * 薄端 2.11:1（淡色）/ 7.72:1（暗）、濃端 7.38:1（淡色）/ 2.20:1（暗）で、
      * 淡色・写真・ダークのどの背景でも消えない。
+     *
+     * 階級の区切りは対象域 352,267メッシュの実分布に合わせている。
+     * 当初は 1/10/30/100/300/1000 で切っていたが、これは分布と噛み合っておらず、
+     * 最も薄い階級だけで45.0%、上位2階級は合わせて0.65%（1000人以上は6メッシュ）
+     * しか入らなかった。ランプの濃い側がほぼ使われず、地図の7割が薄い2色になって
+     * 「どこに人が多いか」が読めない状態だった。
+     * 現在の区切りでの占有率は 25.2 / 30.7 / 21.2 / 14.5 / 7.4 / 1.0 %。
      */
     steps: [
-      { min: 1, color: '#cb9fec', label: '1〜9人' },
-      { min: 10, color: '#bf81eb', label: '10〜29人' },
-      { min: 30, color: '#b067e1', label: '30〜99人' },
-      { min: 100, color: '#9d53cc', label: '100〜299人' },
-      { min: 300, color: '#8649ad', label: '300〜999人' },
-      { min: 1000, color: '#6c4288', label: '1000人以上' },
+      { min: 1, color: '#cb9fec', label: '1〜4人' },
+      { min: 5, color: '#bf81eb', label: '5〜14人' },
+      { min: 15, color: '#b067e1', label: '15〜39人' },
+      { min: 40, color: '#9d53cc', label: '40〜99人' },
+      { min: 100, color: '#8649ad', label: '100〜249人' },
+      { min: 250, color: '#6c4288', label: '250人以上' },
     ],
+    // 立体表示（右下の 2D/3D で切替）。1人あたり5mで、色に加えて高さでも量が読める。
+    extrude: { metersPerUnit: 5 },
     attribution: ESTAT_ATTR,
     popup: {
       rows: ['pop', 'pop65', 'pop75'],
@@ -381,8 +357,10 @@ export const LAYERS: LayerDef[] = [
     },
     desc:
       '令和2年（2020年）国勢調査の125mメッシュ別人口（夜間人口）。揺れた範囲にどれだけの人が住んでいるかを見るためのもの。' +
+      '右下の「3D」で立体表示に切り替えると、色に加えて高さでも人口が読める（1人あたり5m）。' +
       'ズーム9〜14で表示し、低ズームでは隣接メッシュを統合して人口を合算しているため、' +
-      '1区画の値が125mメッシュ1つ分より大きくなることがある。65歳以上・75歳以上の人口はクリックで確認できる。',
+      '1区画の値と3Dの高さが125mメッシュ1つ分より大きくなることがある。拡大するほど正確。' +
+      '65歳以上・75歳以上の人口はクリックで確認できる。',
   },
 
   // ===== 被害状況 =====
@@ -584,14 +562,38 @@ export function mapLayersFor(def: LayerDef): LayerSpecification[] {
   }
 
   if (def.kind === 'pmtiles') {
+    // 先頭階級の下限未満（人口ゼロ等）は描かないよう filter で落とす。
+    const filter: ExpressionSpecification = [
+      '>=',
+      ['to-number', ['get', def.prop], -1],
+      def.steps[0].min,
+    ]
+    if (def.extrude) {
+      // 立体化するレイヤーは 2D でも fill-extrusion のまま高さ0で描く。
+      // レイヤー種別を切り替えると載せ直しが必要になり、状態管理が増えるため。
+      const l: FillExtrusionLayerSpecification = {
+        id: `${src}--fill`,
+        type: 'fill-extrusion',
+        source: src,
+        'source-layer': def.sourceLayer,
+        ...zoom,
+        filter,
+        paint: {
+          'fill-extrusion-color': stepColor(def),
+          'fill-extrusion-opacity': def.opacity,
+          'fill-extrusion-base': 0,
+          'fill-extrusion-height': 0,
+        },
+      }
+      return [l]
+    }
     const l: FillLayerSpecification = {
       id: `${src}--fill`,
       type: 'fill',
       source: src,
       'source-layer': def.sourceLayer,
       ...zoom,
-      // 先頭階級の下限未満（人口ゼロ等）は描かないよう filter で落とす。
-      filter: ['>=', ['to-number', ['get', def.prop], -1], def.steps[0].min],
+      filter,
       paint: { 'fill-color': stepColor(def), 'fill-opacity': def.opacity },
     }
     return [l]
@@ -680,7 +682,8 @@ export function opacityUpdates(def: LayerDef, v: number): { id: string; prop: st
     return [{ id: `${src}--raster`, prop: 'raster-opacity', value: v }]
   }
   if (def.kind === 'pmtiles') {
-    return [{ id: `${src}--fill`, prop: 'fill-opacity', value: v }]
+    const prop = def.extrude ? 'fill-extrusion-opacity' : 'fill-opacity'
+    return [{ id: `${src}--fill`, prop, value: v }]
   }
   if (def.render === 'polygon') {
     return [
@@ -694,6 +697,22 @@ export function opacityUpdates(def: LayerDef, v: number): { id: string; prop: st
   ])
   if (def.icons) out.push({ id: `${src}--icon`, prop: 'icon-opacity', value: v })
   return out
+}
+
+/** 立体表示できるレイヤーか。 */
+export const isExtrudable = (def: LayerDef): boolean => def.kind === 'pmtiles' && !!def.extrude
+
+/**
+ * 立体表示の ON/OFF に伴う paint 更新。
+ * 2D では高さ0にして、塗りと同じ見た目に戻す。
+ */
+export function extrusionUpdates(def: LayerDef, on: boolean): { id: string; prop: string; value: unknown }[] {
+  if (def.kind !== 'pmtiles' || !def.extrude) return []
+  const prop = def.extrude.prop ?? def.prop
+  const height: ExpressionSpecification | number = on
+    ? (['*', ['to-number', ['coalesce', ['get', prop], 0], 0], def.extrude.metersPerUnit] as ExpressionSpecification)
+    : 0
+  return [{ id: `${def.key}--fill`, prop: 'fill-extrusion-height', value: height }]
 }
 
 /** クリック判定に使うレイヤー id（ラスタは対象外）。 */

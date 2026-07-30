@@ -692,13 +692,21 @@ body {
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.basemap-switch button:hover {
-  color: var(--ink);
-}
-
-.basemap-switch button[aria-selected='true'] {
+/* MapLibre 側に
+   `@media (hover:hover){ .maplibregl-ctrl button:not(:disabled):hover{background-color:rgba(0,0,0,.05)} }`
+   と同じ :active があり、詳細度 (0,3,1) でこちらの選択色 (0,2,1) に勝ってしまう。
+   カーソルを乗せた瞬間だけ選択中のボタンからアクセント色が消えるので、
+   `.maplibregl-ctrl` を重ねて詳細度を上げ、hover / active も明示しておく。 */
+.maplibregl-ctrl.basemap-switch button[aria-selected='true'],
+.maplibregl-ctrl.basemap-switch button[aria-selected='true']:hover,
+.maplibregl-ctrl.basemap-switch button[aria-selected='true']:active {
   background: var(--accent);
   color: var(--accent-ink);
+}
+
+.maplibregl-ctrl.basemap-switch button[aria-selected='false']:hover {
+  background: var(--hover);
+  color: var(--ink);
 }
 
 /* ---- MapLibre コントロールの馴染ませ ---- */

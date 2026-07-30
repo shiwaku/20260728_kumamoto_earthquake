@@ -7,7 +7,9 @@ import {
   GROUPS,
   LAYERS,
   type LayerDef,
+  extrusionUpdates,
   iconsToLoad,
+  isExtrudable,
   legendFor,
   mapLayersFor,
   opacityUpdates,
@@ -121,6 +123,26 @@ function ensureIcons(def: LayerDef): Promise<void> {
   return p
 }
 
+// ---- 立体表示（2D / 3D） ----
+// 立体化できるレイヤーは常に fill-extrusion で載せてあり、2D では高さ0にしている。
+// レイヤー種別を差し替えないので、切替で載せ直す必要がない。
+let is3D = false
+
+function applyExtrusion(def: LayerDef): void {
+  for (const u of extrusionUpdates(def, is3D)) {
+    if (map.getLayer(u.id)) map.setPaintProperty(u.id, u.prop, u.value as never)
+  }
+}
+
+function setView3D(on: boolean): void {
+  is3D = on
+  map.easeTo({ pitch: on ? 45 : 0, bearing: on ? -10 : 0, duration: 600 })
+  for (const def of LAYERS) {
+    if (isExtrudable(def)) applyExtrusion(def)
+  }
+  viewCtrl.sync()
+}
+
 // ---- 重なり順 ----
 // z が大きいほど前面。自分より z が大きい既存レイヤーのうち最小のものの直前に挿入する。
 // 震源レイヤーは z=1000 なので、常に最前面に留まる。
@@ -142,6 +164,8 @@ function addLayer(def: LayerDef): void {
     if (map.getLayer(spec.id)) continue
     map.addLayer(spec, before)
   }
+  // 3D 表示中に後から ON にされたレイヤーにも高さを効かせる
+  if (is3D) applyExtrusion(def)
 }
 
 function ensureLayer(def: LayerDef): void {
@@ -357,6 +381,39 @@ class BasemapControl implements maplibregl.IControl {
 }
 const basemapCtrl = new BasemapControl()
 map.addControl(basemapCtrl, 'bottom-right')
+
+// ---- 2D / 3D スイッチャー（右下） ----
+// 立体化できるレイヤーが1つも無いときは意味がないので出さない。
+class ViewControl implements maplibregl.IControl {
+  private el!: HTMLElement
+  onAdd(): HTMLElement {
+    this.el = document.createElement('div')
+    this.el.className = 'maplibregl-ctrl basemap-switch view-switch'
+    for (const [on, label] of [
+      [false, '2D'],
+      [true, '3D'],
+    ] as [boolean, string][]) {
+      const btn = document.createElement('button')
+      btn.type = 'button'
+      btn.textContent = label
+      btn.dataset.view = String(on)
+      btn.setAttribute('aria-selected', String(on === is3D))
+      btn.addEventListener('click', () => setView3D(on))
+      this.el.append(btn)
+    }
+    return this.el
+  }
+  onRemove(): void {
+    this.el.remove()
+  }
+  sync(): void {
+    for (const btn of this.el.querySelectorAll<HTMLButtonElement>('button')) {
+      btn.setAttribute('aria-selected', String((btn.dataset.view === 'true') === is3D))
+    }
+  }
+}
+const viewCtrl = new ViewControl()
+if (LAYERS.some(isExtrudable)) map.addControl(viewCtrl, 'bottom-right')
 
 function setBase(next: Basemap): void {
   if (next === base) return
