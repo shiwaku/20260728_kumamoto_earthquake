@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+
+# 動作確認用の一時スクリプト・スクリーンショット
+_*.mjs
+_shots/
+/tmp/

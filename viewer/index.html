@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>令和8年（2026年）熊本地震 災害情報ビューワ</title>
+  <meta name="description" content="令和8年（2026年）熊本地震の災害情報（国土地理院の空中写真・斜面崩壊分布、防災科研の推計震度分布ほか）を MapLibre GL JS で重ね合わせて閲覧するビューワ" />
+  <meta name="theme-color" content="#b3261e" />
+  <link rel="icon" type="image/png" href="icons/favicon-32.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="熊本地震GIS" />
+</head>
+<body>
+  <div id="map"></div>
+
+  <section id="panel" class="panel" aria-label="コントロールパネル">
+    <header class="panel-head">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">🌐</span>
+        <h1>令和8年 熊本地震 災害情報</h1>
+      </div>
+      <div class="head-actions">
+        <button id="theme-btn" class="icon-btn" type="button" title="テーマ切替" aria-label="テーマ切替"></button>
+        <button id="collapse-btn" class="icon-btn" type="button" title="パネル開閉" aria-label="パネル開閉"></button>
+      </div>
+    </header>
+
+    <div id="panel-body" class="panel-body">
+      <p class="quake-meta">
+        2026年7月28日 16時27分頃 ／ 熊本県熊本地方 深さ16km ／ M7.1（暫定値）<br />
+        最大震度7（宇城市・氷川町）　<span class="epi-note"><span class="epi-dot" aria-hidden="true"></span>= 震央</span>
+      </p>
+      <div class="field">
+        <div class="field-head">
+          <span class="field-label">レイヤー</span>
+          <div class="field-actions">
+            <button id="all-on" class="mini-btn" type="button">全ON</button>
+            <button id="all-off" class="mini-btn" type="button">全OFF</button>
+          </div>
+        </div>
+        <div id="layers" class="toggles"></div>
+      </div>
+    </div>
+
+    <footer class="panel-foot">
+      災害情報: <a href="https://www.gsi.go.jp/BOUSAI/20260728_kumamoto_earthquake.html" target="_blank" rel="noopener">国土地理院「令和8年（2026年）熊本地震に関する情報」</a><br />
+      推計震度: <a href="https://www.j-risq.bosai.go.jp/" target="_blank" rel="noopener">防災科学技術研究所「J-RISQ地震速報」</a><br />
+      背景: 国土地理院 最適化ベクトルタイル / 全国最新写真<br />
+      <span id="build-ver" class="build-ver"></span>
+    </footer>
+  </section>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

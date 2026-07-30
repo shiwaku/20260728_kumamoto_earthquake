@@ -1,0 +1,30 @@
+{
+  "source": "防災科学技術研究所 J-RISQ地震速報",
+  "source_url": "https://www.j-risq.bosai.go.jp/",
+  "wms_endpoint": "https://www.j-risq.bosai.go.jp/report/wms",
+  "wms_layer": "GSI_M250",
+  "report": {
+    "triggerid": "R-20260728162724",
+    "report": "0145",
+    "ana": "00001"
+  },
+  "note": "J-RISQ の WMS は CORS ヘッダーを返さないため、GitHub Pages から直接は読めない。確定済みレポートのスナップショットとしてタイル化して同梱している。",
+  "zoom_plan": [
+    {
+      "minzoom": 5,
+      "maxzoom": 11,
+      "bbox": [
+        128.5,
+        29.4,
+        138.6,
+        37.3
+      ]
+    }
+  ],
+  "zooms_written": [
+    10,
+    11
+  ],
+  "fetched_at": "2026-07-30T00:10:37+00:00",
+  "tiles_written": 631
+}

@@ -1,0 +1,21 @@
+{
+  "name": "kumamoto-eq-2026-viewer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "令和8年（2026年）熊本地震の災害情報レイヤーを MapLibre GL JS で閲覧する WebGIS",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "maplibre-gl": "^5.24.0",
+    "pmtiles": "^4.3.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.1",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}

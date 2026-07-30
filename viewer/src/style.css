@@ -1,0 +1,809 @@
+:root {
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-solid: #ffffff;
+  --ink: #14161a;
+  --ink-2: #5a6069;
+  --ink-3: #8b919b;
+  --line: rgba(20, 22, 26, 0.1);
+  --line-2: rgba(20, 22, 26, 0.16);
+  --accent: #c2352b;
+  --accent-ink: #ffffff;
+  --track: rgba(20, 22, 26, 0.14);
+  --hover: rgba(20, 22, 26, 0.05);
+  --shadow: 0 10px 30px -10px rgba(16, 24, 40, 0.35), 0 2px 8px -4px rgba(16, 24, 40, 0.2);
+  --radius: 16px;
+  --radius-sm: 10px;
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --surface: rgba(24, 26, 30, 0.78);
+  --surface-solid: #1b1e24;
+  --ink: #f2f4f7;
+  --ink-2: #b3b9c4;
+  --ink-3: #7d838e;
+  --line: rgba(255, 255, 255, 0.1);
+  --line-2: rgba(255, 255, 255, 0.16);
+  --accent: #f2705f;
+  --accent-ink: #0a0c10;
+  --track: rgba(255, 255, 255, 0.16);
+  --hover: rgba(255, 255, 255, 0.07);
+  --shadow: 0 12px 32px -10px rgba(0, 0, 0, 0.6), 0 2px 8px -4px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font: 14px/1.5 system-ui, -apple-system, 'Segoe UI', 'Hiragino Kaku Gothic ProN', sans-serif;
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+#map {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---- パネル ---- */
+.panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  max-width: 88vw;
+  /* 常に全高で固定。top:0 + bottom:0 で確実に画面の縦いっぱいにする
+     （height:100dvh の dvh 単位に頼らない）。height:auto にすると内容が
+     画面より低いときパネルが縮み、上半分だけになったり切替で下端が動く。 */
+  bottom: 0;
+  /* backdrop-filter（すりガラス）は使わない。実GPUでの合成不具合により、
+     内部スクロール（.panel-body）を持つパネルで多数レイヤー表示時に描画が
+     破綻する（白化・欠け・上半分だけになる）。モバイルで既に外していた同事象を
+     デスクトップにも適用。背景は不透明にしてブラーなしでも可読にする。 */
+  background: var(--surface-solid);
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.panel.collapsed {
+  /* 畳んだらヘッダの高さだけに（全高固定を解除） */
+  bottom: auto;
+  height: auto;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 12px 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.brand-mark {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.panel h1 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.25;
+}
+
+.head-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.icon-btn {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.icon-btn:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.panel-body {
+  padding: 14px;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  /* パネル内スクロールが地図のズーム/ページスクロールへ連鎖しないようにする */
+  overscroll-behavior: contain;
+  /* -webkit-overflow-scrolling: touch は付けない。Safari/WebKit で独立スクロール
+     レイヤーを作り、レイヤーON等で内容高が変わるとスクロール範囲の計算が古いまま
+     残り、最上部まで戻れなくなる不具合の原因になる（区域区分で止まる症状）。
+     現行 Safari は指定なしでも慣性スクロールする。 */
+}
+
+.panel-head {
+  flex: none;
+}
+
+.panel.collapsed .panel-body {
+  display: none;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ---- 年次セグメント ---- */
+.seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 2px;
+  padding: 3px;
+  background: var(--track);
+  border-radius: var(--radius-sm);
+}
+
+.seg button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 6px 0;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.seg button:hover {
+  color: var(--ink);
+}
+
+.seg button[aria-selected='true'] {
+  background: var(--surface-solid);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.14);
+}
+
+/* ---- レイヤートグル ---- */
+.toggles {
+  display: grid;
+  gap: 2px;
+}
+
+.toggle {
+  /* 中の checkbox（position:absolute の視覚非表示）を必ずこのラベル内に閉じ込める。
+     これが無いと checkbox の基準がスクロール領域外の .panel になり、内容と一緒に
+     スクロールしない位置に固定される。クリックでそこへフォーカスが移ると
+     ブラウザのスクロール処理と衝突し、パネルがスクロール不能になる／位置が飛ぶ
+     （全ON=JS設定はフォーカスが発生しないため壊れない）。 */
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.toggle:hover {
+  background: var(--hover);
+}
+
+.toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.switch {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--track);
+  transition: background 0.18s ease;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  transition: transform 0.18s ease;
+}
+
+.toggle input:checked + .switch {
+  background: var(--accent);
+}
+
+.toggle input:checked + .switch::after {
+  transform: translateX(14px);
+}
+
+.toggle input:focus-visible + .switch {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.toggle .t-label {
+  /* flex:1 にすると i ボタンが行の右端へ離れてしまうため自然幅（名前の直後に i が付く） */
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 13px;
+}
+
+/* ---- レイヤー説明の i ボタン / 説明文 ---- */
+.info-btn {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-3);
+  font: italic 700 10px/1 Georgia, 'Times New Roman', serif;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.info-btn:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+.info-btn[aria-expanded='true'] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.layer-desc {
+  padding: 2px 8px 6px 44px;
+  font-size: 11.5px;
+  line-height: 1.65;
+  color: var(--ink-2);
+}
+
+.layer-desc[hidden] {
+  display: none;
+}
+
+/* ---- 各レイヤー直下のインライン凡例 ---- */
+.layer-item {
+  display: grid;
+  gap: 2px;
+}
+
+.layer-legend {
+  display: grid;
+  gap: 3px;
+  padding: 2px 8px 6px 44px;
+}
+
+.layer-legend[hidden] {
+  display: none;
+}
+
+.lg-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+
+.lg-sw {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  border: 1px solid var(--line-2);
+}
+
+.lg-bar {
+  display: block;
+  /* 全幅だと線が長すぎて凡例に見えないため、短いスウォッチにする */
+  width: 48px;
+  height: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--line-2);
+}
+
+/* 凡例スウォッチの形（面 / 線 / 点） */
+.lg-box {
+  border-radius: 3px;
+}
+
+.lg-line {
+  height: 3px;
+  width: 18px;
+  border-radius: 2px;
+  border: none;
+}
+
+.lg-dot {
+  border-radius: 999px;
+}
+
+/* 凡例が画像で配布されているレイヤー（斜面崩壊分布図など） */
+.lg-img {
+  display: block;
+  width: 100%;
+  max-width: 210px;
+  height: auto;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+}
+
+/* ---- グループ見出し（揺れ / 被害状況 / 空中写真 …） ---- */
+.group-head {
+  margin: 10px 0 2px;
+  padding: 0 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  color: var(--ink-3);
+}
+
+.group-head:first-child {
+  margin-top: 0;
+}
+
+/* ---- 地震の諸元 ---- */
+.quake-meta {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--hover);
+  border: 1px solid var(--line);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+
+.epi-note {
+  color: #d20028;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* 地図上の震央マーカー（circle 2枚）と同じ見た目のミニ凡例 */
+.epi-dot {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-right: 5px;
+  vertical-align: -1px;
+  border-radius: 999px;
+  background: #d20028;
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.95), 0 0 0 4px rgba(210, 0, 40, 0.25);
+}
+
+/* ---- レイヤー配下のサブ切替（用途地域スタンプ等） ---- */
+.layer-sub {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 8px 4px 44px;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+
+.layer-sub[hidden] {
+  display: none;
+}
+
+.layer-sub input[type='checkbox'] {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+/* ---- レイヤー不透明度スライダー ---- */
+.layer-opacity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 4px 44px;
+}
+
+.layer-opacity[hidden] {
+  display: none;
+}
+
+.layer-opacity input[type='range'] {
+  flex: 1;
+  height: 8px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.op-val {
+  flex: none;
+  width: 34px;
+  text-align: right;
+  font-size: 10.5px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+/* クリック時の全属性ポップアップ（多数の属性はスクロール） */
+.pp-dl.pp-all {
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.pp-dl.pp-all dt {
+  word-break: break-all;
+}
+
+.pp-dl.pp-all dd {
+  word-break: break-all;
+}
+
+/* ---- フィールド見出し / ミニボタン ---- */
+.field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mini-btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.mini-btn:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+
+/* ---- 凡例 ---- */
+.legend {
+  display: grid;
+  gap: 12px;
+}
+
+.legend-block {
+  display: grid;
+  gap: 5px;
+}
+
+.legend-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+
+.legend-sw {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--line-2);
+}
+
+.legend-empty {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.legend-bar {
+  height: 10px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+}
+
+.legend-ticks {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-foot {
+  flex: none;
+  padding: 12px 14px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--ink-3);
+  border-top: 1px solid var(--line);
+}
+
+.panel.collapsed .panel-foot {
+  display: none;
+}
+
+.panel-foot a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.panel-foot a:hover {
+  text-decoration: underline;
+}
+
+/* ---- ポップアップ（MapLibre 上書き） ---- */
+.maplibregl-popup-content {
+  background: var(--surface-solid);
+  color: var(--ink);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 12px 14px;
+  font: inherit;
+}
+
+.maplibregl-popup-close-button {
+  color: var(--ink-3);
+  font-size: 18px;
+  padding: 2px 7px;
+}
+
+.maplibregl-popup-tip {
+  display: none;
+}
+
+.pp-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.pp-sub {
+  font-size: 12px;
+  color: var(--ink-2);
+  margin-top: 1px;
+}
+
+.pp-dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 14px;
+  margin: 9px 0 0;
+}
+
+.pp-dl dt {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.pp-dl dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.pp-dl dd.pp-strong {
+  color: var(--accent);
+  font-size: 15px;
+}
+
+.pp-foot {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+
+/* ---- 背景地図スイッチャー（右下） ---- */
+.basemap-switch {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  /* backdrop-filter は背景切替時のホバーで白化するため使わず、不透明背景にする */
+  background: var(--surface-solid);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+}
+
+.basemap-switch button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 5px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.basemap-switch button:hover {
+  color: var(--ink);
+}
+
+.basemap-switch button[aria-selected='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+/* ---- MapLibre コントロールの馴染ませ ---- */
+.maplibregl-ctrl-group {
+  background: var(--surface-solid);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+}
+
+/* ---- レスポンシブ（モバイルはボトムシート） ---- */
+@media (max-width: 640px) {
+  .panel {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-width: none;
+    height: auto;
+    max-height: 62dvh;
+    border: none;
+    border-top: 1px solid var(--line);
+    border-radius: 0;
+  }
+
+  .panel.collapsed {
+    max-height: none;
+    /* デスクトップ用の .panel.collapsed { bottom:auto } を打ち消す。
+       モバイルは top:auto のため bottom まで auto になるとパネルが
+       画面最上部へ飛ぶ。畳んでも下端固定のボトムシートを維持する。 */
+    bottom: 0;
+  }
+
+  .panel-head {
+    padding: 14px 12px;
+  }
+
+  .panel-foot {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* 畳んだパネルのヘッダ分だけ、地図コントロール（右下:背景切替/情報, 左下:縮尺）を持ち上げる */
+  .maplibregl-ctrl-bottom-right,
+  .maplibregl-ctrl-bottom-left {
+    margin-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* タッチ操作しやすいよう当たり判定を拡大 */
+  .toggle {
+    padding: 9px 8px;
+  }
+
+  .info-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+  }
+
+  .basemap-switch button {
+    padding: 7px 14px;
+  }
+
+  .maplibregl-ctrl-top-right {
+    margin-top: env(safe-area-inset-top, 0px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}
+
+/* ---- 診断HUD（?debug 時のみ） ---- */
+#diag-hud {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 9999;
+  max-width: 60vw;
+  max-height: 70vh;
+  overflow: auto;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.82);
+  color: #d6f5c8;
+  font: 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+  white-space: normal;
+  word-break: break-all;
+}
+
+#diag-hud b {
+  color: #fff;
+}
+
+#diag-hud u {
+  display: inline-block;
+  margin-top: 4px;
+  color: #7fd0ff;
+  text-decoration: none;
+  font-weight: 700;
+}
