@@ -28,6 +28,8 @@ const GSI_ATTR =
 const NIED_ATTR =
   '<a href="https://www.j-risq.bosai.go.jp/" target="_blank" rel="noopener">防災科学技術研究所 J-RISQ地震速報</a>'
 const JMA_ATTR = '<a href="https://www.jma.go.jp/" target="_blank" rel="noopener">気象庁</a>'
+const ESTAT_ATTR =
+  '<a href="https://www.e-stat.go.jp/gis" target="_blank" rel="noopener">国勢調査2020 125mメッシュ（総務省統計局／e-Stat）</a>'
 const HERP_ATTR =
   '<a href="https://www.jishin.go.jp/main/oshirase/20260728_kumamoto.html" target="_blank" rel="noopener">地震調査研究推進本部</a>'
 
@@ -97,6 +99,28 @@ interface WmsDef extends LayerBase {
   maxzoom?: number
 }
 
+/**
+ * PMTiles のベクタタイルを、1属性の階級区分（コロプレス）で塗るレイヤー。
+ * 統計系のレイヤーを足すときはこの kind を使う。
+ */
+interface ChoroplethDef extends LayerBase {
+  kind: 'pmtiles'
+  /** PMTiles の URL（`pmtiles://` は内部で付ける） */
+  url: string
+  /** タイル内のレイヤー名 */
+  sourceLayer: string
+  /** 色分けに使う属性 */
+  prop: string
+  /**
+   * 階級。min の昇順に並べる。先頭の min 未満は描かない（値なし扱い）。
+   * MapLibre の step 式と凡例の両方をここから作る。
+   */
+  steps: { min: number; color: string; label: string }[]
+  minzoom?: number
+  maxzoom?: number
+  popup?: PopupSpec
+}
+
 /** ポップアップの組み立て方 */
 interface PopupSpec {
   /** タイトルに使う属性。無ければレイヤー名。 */
@@ -159,7 +183,7 @@ interface GeoJsonPointDef extends LayerBase {
   circle?: CircleSpec[]
 }
 
-export type LayerDef = RasterDef | WmsDef | GeoJsonPolygonDef | GeoJsonPointDef
+export type LayerDef = RasterDef | WmsDef | GeoJsonPolygonDef | GeoJsonPointDef | ChoroplethDef
 
 // ---- 防災科研 J-RISQ 推計震度分布 ----
 /**
@@ -311,6 +335,40 @@ export const LAYERS: LayerDef[] = [
       'z11までのタイルを同梱しており、それ以上のズームは拡大表示になる。',
   },
 
+  // ===== 人口 =====
+  {
+    kind: 'pmtiles',
+    key: 'pop-mesh',
+    name: '夜間人口（国勢調査2020 125mメッシュ）',
+    group: '人口',
+    on: false,
+    opacity: 0.75,
+    z: 15,
+    url: `${import.meta.env.BASE_URL}data/census/pop_mesh125.pmtiles`,
+    sourceLayer: 'pop_mesh',
+    prop: 'pop',
+    minzoom: 9,
+    maxzoom: 14,
+    // 階級は ColorBrewer の Purples 系。推計震度（青→緑→黄→赤）と混ざらない色相にしてある。
+    steps: [
+      { min: 1, color: '#efedf5', label: '1〜9人' },
+      { min: 10, color: '#dadaeb', label: '10〜29人' },
+      { min: 30, color: '#bcbddc', label: '30〜99人' },
+      { min: 100, color: '#9e9ac8', label: '100〜299人' },
+      { min: 300, color: '#756bb1', label: '300〜999人' },
+      { min: 1000, color: '#54278f', label: '1000人以上' },
+    ],
+    attribution: ESTAT_ATTR,
+    popup: {
+      rows: ['pop', 'pop65', 'pop75'],
+      labels: { pop: '総人口', pop65: '65歳以上', pop75: '75歳以上' },
+    },
+    desc:
+      '令和2年（2020年）国勢調査の125mメッシュ別人口（夜間人口）。揺れた範囲にどれだけの人が住んでいるかを見るためのもの。' +
+      'ズーム9〜14で表示し、低ズームでは隣接メッシュを統合して人口を合算しているため、' +
+      '1区画の値が125mメッシュ1つ分より大きくなることがある。65歳以上・75歳以上の人口はクリックで確認できる。',
+  },
+
   // ===== 被害状況 =====
   {
     kind: 'geojson',
@@ -434,12 +492,21 @@ export const LAYERS: LayerDef[] = [
 ]
 
 /** パネルに出すグループの順序。LAYERS に無いグループは無視される。 */
-export const GROUPS = ['震源・揺れ', '被害状況', '空中写真', '地形・活断層'] as const
+export const GROUPS = ['震源・揺れ', '人口', '被害状況', '空中写真', '地形・活断層'] as const
 
 export const layerById = (key: string): LayerDef | undefined => LAYERS.find((l) => l.key === key)
 
 // ---- ソース定義 ----
 export function sourceFor(def: LayerDef): SourceSpecification {
+  if (def.kind === 'pmtiles') {
+    return {
+      type: 'vector',
+      url: `pmtiles://${def.url}`,
+      ...(def.minzoom !== undefined ? { minzoom: def.minzoom } : {}),
+      ...(def.maxzoom !== undefined ? { maxzoom: def.maxzoom } : {}),
+      attribution: def.attribution,
+    }
+  }
   if (def.kind === 'raster' || def.kind === 'wms') {
     return {
       type: 'raster',
@@ -475,6 +542,14 @@ function lineOpacityExpr(opacity: number): ExpressionSpecification {
 }
 const lineWidthExpr: ExpressionSpecification = ['to-number', ['coalesce', ['get', '_weight'], 1]]
 
+/** 階級区分の step 式。steps は min の昇順。 */
+function stepColor(def: ChoroplethDef): ExpressionSpecification {
+  const [first, ...rest] = def.steps
+  const expr: unknown[] = ['step', ['to-number', ['get', def.prop], 0], first.color]
+  for (const s of rest) expr.push(s.min, s.color)
+  return expr as ExpressionSpecification
+}
+
 export function mapLayersFor(def: LayerDef): LayerSpecification[] {
   const src = def.key
   const zoom = {
@@ -488,6 +563,20 @@ export function mapLayersFor(def: LayerDef): LayerSpecification[] {
       type: 'raster',
       source: src,
       paint: { 'raster-opacity': def.opacity },
+    }
+    return [l]
+  }
+
+  if (def.kind === 'pmtiles') {
+    const l: FillLayerSpecification = {
+      id: `${src}--fill`,
+      type: 'fill',
+      source: src,
+      'source-layer': def.sourceLayer,
+      ...zoom,
+      // 先頭階級の下限未満（人口ゼロ等）は描かないよう filter で落とす。
+      filter: ['>=', ['to-number', ['get', def.prop], -1], def.steps[0].min],
+      paint: { 'fill-color': stepColor(def), 'fill-opacity': def.opacity },
     }
     return [l]
   }
@@ -574,6 +663,9 @@ export function opacityUpdates(def: LayerDef, v: number): { id: string; prop: st
   if (def.kind === 'raster' || def.kind === 'wms') {
     return [{ id: `${src}--raster`, prop: 'raster-opacity', value: v }]
   }
+  if (def.kind === 'pmtiles') {
+    return [{ id: `${src}--fill`, prop: 'fill-opacity', value: v }]
+  }
   if (def.render === 'polygon') {
     return [
       { id: `${src}--fill`, prop: 'fill-opacity', value: fillOpacityExpr(v) },
@@ -591,6 +683,7 @@ export function opacityUpdates(def: LayerDef, v: number): { id: string; prop: st
 /** クリック判定に使うレイヤー id（ラスタは対象外）。 */
 export function queryableLayerIds(def: LayerDef): string[] {
   if (def.kind === 'raster' || def.kind === 'wms') return []
+  if (def.kind === 'pmtiles') return [`${def.key}--fill`]
   if (def.render === 'polygon') return [`${def.key}--fill`, `${def.key}--line`]
   const ids = circleSpecs(def).map((_, i) => circleId(def.key, i))
   return def.icons ? [`${def.key}--icon`, ...ids] : ids
@@ -617,7 +710,7 @@ function esc(s: string): string {
  * それ以外はエスケープし、`_` 始まりの内部スタイル属性は出さない。
  */
 export function popupHtml(def: LayerDef, props: Record<string, unknown>): string {
-  const spec = def.kind === 'geojson' ? def.popup : undefined
+  const spec = def.kind === 'geojson' || def.kind === 'pmtiles' ? def.popup : undefined
   const rawHtml = new Set(spec?.html ?? [])
   const keys = spec?.rows ?? Object.keys(props).filter((k) => !k.startsWith('_'))
 
@@ -641,9 +734,13 @@ export function popupHtml(def: LayerDef, props: Record<string, unknown>): string
   )
 }
 
-/** レイヤートグルの色ドット用の代表色。 */
-export function dotColor(def: LayerDef): string {
-  if (def.legend?.length) return def.legend[0].color
-  if (def.kind === 'geojson') return def.render === 'polygon' ? '#ff3232' : '#0a64c8'
-  return 'rgba(150,150,150,0.9)'
+/**
+ * パネルに出す凡例。
+ * 階級区分レイヤーは steps から組み立てる（凡例と塗り分けが必ず一致するようにするため）。
+ */
+export function legendFor(def: LayerDef): LegendItem[] {
+  if (def.kind === 'pmtiles') {
+    return def.steps.map((s) => ({ label: s.label, color: s.color, outline: 'rgba(0,0,0,0.25)' }))
+  }
+  return def.legend ?? []
 }

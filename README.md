@@ -8,6 +8,7 @@
 | --- | --- | --- | --- | --- |
 | 震源・揺れ | 震源（震央） | GeoJSON（点） | 気象庁 | ON |
 | 震源・揺れ | 推計震度分布（250mメッシュ） | ラスタタイル（同梱） | 防災科研 J-RISQ地震速報 | ON |
+| 人口 | 夜間人口（国勢調査2020 125mメッシュ） | PMTiles（同梱・359,259メッシュ） | 総務省統計局／e-Stat | |
 | 被害状況 | 斜面崩壊・土石流・堆積分布 | GeoJSON（21面） | 国土地理院 | |
 | 空中写真 | 正射画像（速報）八代地区 7/29撮影 | ラスタタイル | 国土地理院 | |
 | 空中写真 | 垂直写真（速報）八代地区 7/29撮影 | GeoJSON（点・513枚） | 国土地理院 | |
@@ -54,6 +55,9 @@ Vite の `base` は `'./'` にしてあるため、プロジェクトページ�
 - `geojson` … `render: 'polygon'`（面。LineString が混在していても線として描かれる）/
   `render: 'point'`（`icons` でアイコン画像、`circle` で円マーカー。`data` は URL でもインラインの
   FeatureCollection でもよい）
+- `pmtiles` … PMTiles のベクタタイルを1属性の階級区分（コロプレス）で塗る。
+  `prop` に対象属性、`steps` に `{min, color, label}` を昇順で並べると、
+  MapLibre の `step` 式と凡例の両方がそこから作られる（塗り分けと凡例が食い違わない）
 
 ポップアップは `popup` で組み立てる。`title` にタイトルへ使う属性、`rows` に出す属性の順序、
 `labels` に見出しの読み替え、`html` にエスケープせず埋め込む属性（地理院の写真レイヤーは
@@ -121,6 +125,30 @@ python3 tools/build_active_fault.py --input raw/gsi/active_fault_jishinhonbu.geo
 そのため、クリック時は「`_` 始まり以外の属性を持つ地物」を優先して選ぶようにしている
 （先頭決め打ちだと、線に当たったときに空のポップアップになる）。
 
+## 夜間人口メッシュを作り直している理由
+
+国勢調査2020の125mメッシュ人口は、別プロジェクト `japan-mobility-ease-diagnosis` の
+食料品アクセス分析で全国版 PMTiles（`output/food_desert_125m.pmtiles`）が作られている。
+ただし **311MB あり GitHub の1ファイル100MB上限を超える**。食料品店までの距離という
+本件に無関係な高エントロピー属性が入っていることもサイズを押し上げている。
+
+そこで同じ parquet から、人口3項目だけに絞って揺れた範囲へ切り出し直している。
+
+```sh
+python3 tools/build_population_mesh.py
+python3 tools/build_population_mesh.py --bbox 129.8 31.5 131.6 33.5
+```
+
+- 入力: `../japan-mobility-ease-diagnosis/output/food_desert_125m.parquet`
+  （**このリポジトリの外**にあるので、他の環境でそのままは再現できない）
+- 出力: `viewer/public/data/census/pop_mesh125.pmtiles`（19MB、レイヤー名 `pop_mesh`、
+  属性 `pop` / `pop65` / `pop75`）
+- 範囲: 推計震度5弱以上が及んだ九州中北部（129.5-132.0E / 31.0-33.8N）、
+  359,259メッシュ・総人口1,141万人
+- ズーム: z9-z14。低ズームでは125mメッシュが1画素未満になるため
+  `--coalesce-densest-as-needed` で隣接メッシュを統合し、`--accumulate-attribute` で
+  人口を合算している。**そのため低ズームでは1区画の値が125mメッシュ1つ分より大きくなる**
+
 ## リポジトリ構成
 
 ```
@@ -128,11 +156,12 @@ python3 tools/build_active_fault.py --input raw/gsi/active_fault_jishinhonbu.geo
 raw/                           取得した原本（J-RISQ の KML、主要活断層帯の GeoJSON）
 tools/fetch_jrisq_tiles.py     J-RISQ の WMS → 静的 XYZ タイル
 tools/build_active_fault.py    主要活断層帯 GeoJSON の圧縮
+tools/build_population_mesh.py 国勢調査125mメッシュ人口 → PMTiles（対象域に切り出し）
 tools/make_icons.py            ファビコン・アプリアイコンの生成
 viewer/src/layers.ts           レイヤーレジストリ（ここに足す）
 viewer/src/main.ts             kind を見てレイヤーを載せる汎用エンジン
 viewer/src/basemap.ts          背景地図（淡色ベクター／写真、ダークは明度反転）
-viewer/public/data/            同梱データ（推計震度タイル、主要活断層帯）
+viewer/public/data/            同梱データ（推計震度タイル、主要活断層帯、夜間人口メッシュ）
 ```
 
 ## 未対応（今後）
@@ -146,4 +175,6 @@ viewer/public/data/            同梱データ（推計震度タイル、主要�
 
 - 国土地理院コンテンツの利用は[国土地理院コンテンツ利用規約](https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html)に従う
 - J-RISQ地震速報の利用は防災科学技術研究所の定めに従う
+- 国勢調査の統計データ・境界データの利用は[政府統計の総合窓口（e-Stat）の利用規約](https://www.e-stat.go.jp/terms-of-use)に従う
+- 主要活断層帯のデータは地震調査研究推進本部の長期評価に基づく
 - 本ビューワのコードは MIT License

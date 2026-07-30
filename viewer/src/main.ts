@@ -8,6 +8,7 @@ import {
   LAYERS,
   type LayerDef,
   iconsToLoad,
+  legendFor,
   mapLayersFor,
   opacityUpdates,
   popupHtml,
@@ -205,8 +206,9 @@ function legendMarkup(def: LayerDef): string {
   if (def.legendImage) {
     return `<img class="lg-img" src="${def.legendImage}" alt="${def.name}の凡例" loading="lazy" />`
   }
-  if (!def.legend?.length) return ''
-  return def.legend
+  const items = legendFor(def)
+  if (!items.length) return ''
+  return items
     .map((it) => {
       const border = it.outline ? `border-color:${it.outline}` : ''
       return `<span class="lg-row"><span class="lg-sw lg-${it.shape ?? 'box'}" style="background:${it.color};${border}"></span>${it.label}</span>`
