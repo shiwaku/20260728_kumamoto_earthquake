@@ -712,6 +712,80 @@ body {
   font-size: 10px;
 }
 
+/* ダークテーマのコントロールアイコン。
+   MapLibre のアイコンは SVG の data URI が背景画像として当たっており、
+   fill は #333 固定（prefers-color-scheme を変えても #333 のままだと実測で確認）。
+   一方こちらの背景は --surface-solid（#1b1e24）なので、そのままだと暗色同士で読めない。
+   コンパスだけは下向き三角が #ccc で描かれているため、同じパネル内で
+   明色と暗色が混在して見えるという問題もあった。
+
+   filter: invert は現在地ボタンの作動中（水色）まで反転させてしまうので使わず、
+   MapLibre と同じ形状の SVG を明色で置き直している。
+   パスは node_modules/maplibre-gl/dist/maplibre-gl.css の定義をそのまま写したもの。 */
+:root[data-theme='dark'] .maplibregl-ctrl button.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' fill='%23e8eaed' viewBox='0 0 29 29'%3E%3Cpath d='M14.5 8.5c-.75 0-1.5.75-1.5 1.5v3h-3c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h3v3c0 .75.75 1.5 1.5 1.5S16 19.75 16 19v-3h3c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-3v-3c0-.75-.75-1.5-1.5-1.5'/%3E%3C/svg%3E");
+}
+
+:root[data-theme='dark'] .maplibregl-ctrl button.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' fill='%23e8eaed' viewBox='0 0 29 29'%3E%3Cpath d='M10 13c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h9c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13z'/%3E%3C/svg%3E");
+}
+
+/* 北（上向き）を明色、南（下向き）を控えめな灰にして、明暗の役割は元のまま保つ */
+:root[data-theme='dark'] .maplibregl-ctrl button.maplibregl-ctrl-compass .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' fill='%23e8eaed' viewBox='0 0 29 29'%3E%3Cpath d='m10.5 14 4-8 4 8z'/%3E%3Cpath fill='%23767d89' d='m10.5 16 4 8 4-8z'/%3E%3C/svg%3E");
+}
+
+:root[data-theme='dark'] .maplibregl-ctrl button.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' fill='%23e8eaed' viewBox='0 0 20 20'%3E%3Cpath d='M10 4C9 4 9 5 9 5v.1A5 5 0 0 0 5.1 9H5s-1 0-1 1 1 1 1 1h.1A5 5 0 0 0 9 14.9v.1s0 1 1 1 1-1 1-1v-.1a5 5 0 0 0 3.9-3.9h.1s1 0 1-1-1-1-1-1h-.1A5 5 0 0 0 11 5.1V5s0-1-1-1m0 2.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 1 1 0-7'/%3E%3Ccircle cx='10' cy='10' r='2'/%3E%3C/svg%3E");
+}
+
+/* 現在地の取得に失敗したときのグレーアウトも、暗背景で沈まない明るさにする */
+:root[data-theme='dark'] .maplibregl-ctrl button.maplibregl-ctrl-geolocate:disabled .maplibregl-ctrl-icon {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='29' height='29' fill='%23767d89' viewBox='0 0 20 20'%3E%3Cpath d='M10 4C9 4 9 5 9 5v.1A5 5 0 0 0 5.1 9H5s-1 0-1 1 1 1 1 1h.1A5 5 0 0 0 9 14.9v.1s0 1 1 1 1-1 1-1v-.1a5 5 0 0 0 3.9-3.9h.1s1 0 1-1-1-1-1-1h-.1A5 5 0 0 0 11 5.1V5s0-1-1-1m0 2.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 1 1 0-7'/%3E%3Ccircle cx='10' cy='10' r='2'/%3E%3C/svg%3E");
+}
+
+/* ボタン間の仕切りは既定が #ddd で、暗背景では明るすぎて線だけが目立つ */
+:root[data-theme='dark'] .maplibregl-ctrl-group button + button {
+  border-top-color: var(--line-2);
+}
+
+/* ホバーの既定は rgba(0,0,0,.05) で暗背景では効きが分からない */
+:root[data-theme='dark'] .maplibregl-ctrl-group button:not(:disabled):hover {
+  background-color: var(--hover);
+}
+
+/* 出典表示とスケールも既定は白地・黒文字のままで、ダークテーマだと
+   ここだけ明るい帯として浮く。出典は法的に読めることが要るので、
+   コントラストを確保した上で暗い面に合わせる。 */
+:root[data-theme='dark'] .maplibregl-ctrl-attrib,
+:root[data-theme='dark'] .maplibregl-ctrl-attrib.maplibregl-compact {
+  background-color: var(--surface-solid);
+  color: var(--ink-2);
+}
+
+:root[data-theme='dark'] .maplibregl-ctrl-attrib a {
+  color: var(--ink-2);
+}
+
+:root[data-theme='dark'] .maplibregl-ctrl-attrib a:hover {
+  color: var(--ink);
+}
+
+/* 開閉の ⓘ は単色なので、反転でそのまま明色になる（色付きの状態を持たない） */
+:root[data-theme='dark'] .maplibregl-ctrl-attrib.maplibregl-compact::after {
+  filter: invert(1);
+}
+
+:root[data-theme='dark'] .maplibregl-ctrl-attrib-button {
+  background-color: transparent;
+}
+
+:root[data-theme='dark'] .maplibregl-ctrl-scale {
+  background-color: rgba(24, 26, 30, 0.75);
+  border-color: var(--line-2);
+  color: var(--ink-2);
+}
+
 /* ---- レスポンシブ（モバイルはボトムシート） ---- */
 @media (max-width: 640px) {
   .panel {
