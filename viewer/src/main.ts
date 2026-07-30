@@ -10,10 +10,12 @@ import {
   extrusionUpdates,
   iconsToLoad,
   isExtrudable,
+  isTerrain,
   legendFor,
   mapLayersFor,
   opacityUpdates,
   popupHtml,
+  sliderOf,
   queryableLayerIds,
   sourceFor,
 } from './layers'
@@ -136,7 +138,9 @@ function applyExtrusion(def: LayerDef): void {
 
 function setView3D(on: boolean): void {
   is3D = on
-  map.easeTo({ pitch: on ? 45 : 0, bearing: on ? -10 : 0, duration: 600 })
+  // 地形が入っているときは起伏が見えるよう深く倒す
+  const terrainOn = LAYERS.some((l) => isTerrain(l) && l.on)
+  map.easeTo({ pitch: on ? (terrainOn ? 62 : 45) : 0, bearing: on ? -15 : 0, duration: 600 })
   for (const def of LAYERS) {
     if (isExtrudable(def)) applyExtrusion(def)
   }
@@ -157,6 +161,14 @@ function beforeIdFor(def: LayerDef): string | undefined {
 
 function addLayer(def: LayerDef): void {
   if (!map.getSource(def.key)) map.addSource(def.key, sourceFor(def))
+  if (isTerrain(def)) {
+    map.setTerrain({ source: def.key, exaggeration: def.opacity })
+    // 真上から見ていると起伏が分からないので、水平なら 3D 表示に切り替える。
+    // 独自に easeTo せず setView3D を通すのは、右下の 2D/3D ボタンの表示と
+    // 実際の傾きが食い違わないようにするため。
+    if (!is3D) setView3D(true)
+    return
+  }
   const specs = mapLayersFor(def)
   if (specs.every((s) => map.getLayer(s.id))) return
   const before = beforeIdFor(def)
@@ -181,6 +193,8 @@ function ensureLayer(def: LayerDef): void {
 }
 
 function removeLayer(def: LayerDef): void {
+  // 地形は setTerrain を外してからでないとソースを消せない
+  if (isTerrain(def) && map.getTerrain()) map.setTerrain(null)
   for (const spec of mapLayersFor(def)) {
     if (map.getLayer(spec.id)) map.removeLayer(spec.id)
   }
@@ -293,19 +307,23 @@ function buildPanel(): void {
       const opac = document.createElement('div')
       opac.className = 'layer-opacity'
       opac.hidden = !def.on
+      const sl = sliderOf(def)
+      const fmt = (v: number): string =>
+        sl.scale === 1 ? `${v.toFixed(1)}${sl.suffix}` : `${Math.round(v * sl.scale)}${sl.suffix}`
       const range = document.createElement('input')
       range.type = 'range'
-      range.min = '0'
-      range.max = '1'
-      range.step = '0.05'
+      range.min = String(sl.min)
+      range.max = String(sl.max)
+      range.step = String(sl.step)
       range.value = String(def.opacity)
-      range.setAttribute('aria-label', `${def.name}の不透明度`)
+      range.setAttribute('aria-label', `${def.name}の${sl.label}`)
+      range.title = sl.label
       const val = document.createElement('span')
       val.className = 'op-val'
-      val.textContent = `${Math.round(def.opacity * 100)}%`
+      val.textContent = fmt(def.opacity)
       range.addEventListener('input', () => {
         const v = Number(range.value)
-        val.textContent = `${Math.round(v * 100)}%`
+        val.textContent = fmt(v)
         setLayerOpacity(def, v)
       })
       opac.append(range, val)
@@ -333,6 +351,11 @@ function setLayerVisible(def: LayerDef, on: boolean): void {
 
 function setLayerOpacity(def: LayerDef, v: number): void {
   def.opacity = v
+  if (isTerrain(def)) {
+    // 地形は paint ではなく setTerrain の exaggeration
+    if (map.getTerrain()) map.setTerrain({ source: def.key, exaggeration: v })
+    return
+  }
   for (const u of opacityUpdates(def, v)) {
     if (map.getLayer(u.id)) map.setPaintProperty(u.id, u.prop, u.value as never)
   }

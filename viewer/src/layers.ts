@@ -29,6 +29,8 @@ const GSI_ATTR =
 const JMA_ATTR = '<a href="https://www.jma.go.jp/" target="_blank" rel="noopener">気象庁</a>'
 const ESTAT_ATTR =
   '<a href="https://www.e-stat.go.jp/gis" target="_blank" rel="noopener">国勢調査2020 125mメッシュ（総務省統計局／e-Stat）</a>'
+const AIST_ATTR =
+  '<a href="https://gbank.gsj.jp/seamless/elev/" target="_blank" rel="noopener">産業技術総合研究所 地質調査総合センター シームレス標高タイル</a>'
 const HERP_ATTR =
   '<a href="https://www.jishin.go.jp/main/oshirase/20260728_kumamoto.html" target="_blank" rel="noopener">地震調査研究推進本部</a>'
 
@@ -59,6 +61,11 @@ interface LayerBase {
   opacity: number
   /** i ボタンで開く説明。データの性質・判読上の注意を書く。 */
   desc: string
+  /**
+   * スライダーの意味。既定は不透明度（0〜1、%表示）。
+   * 3D地形のように不透明度を持たないレイヤーは、ここで別の量に振り替える。
+   */
+  slider?: { min: number; max: number; step: number; label: string; suffix: string; scale: number }
   /** AttributionControl に出す出典 */
   attribution: string
   /**
@@ -192,7 +199,47 @@ interface GeoJsonPointDef extends LayerBase {
   circle?: CircleSpec[]
 }
 
-export type LayerDef = RasterDef | WmsDef | GeoJsonPolygonDef | GeoJsonPointDef | ChoroplethDef
+/**
+ * 3D地形。レイヤーではなく map.setTerrain() で効かせるため、描画レイヤーは持たない。
+ * `opacity` はスライダーの値として標高の誇張率に使う（slider で意味を差し替える）。
+ */
+interface TerrainDef extends LayerBase {
+  kind: 'terrain'
+  tiles: string[]
+  minzoom?: number
+  maxzoom?: number
+  tileSize?: number
+  /**
+   * 標高の復号方式。
+   *
+   * 産総研は同じ標高を2つの形式で配信している。
+   * - PNG標高タイル `tiles.gsj.jp/tiles/elev/{src}/{z}/{y}/{x}.png`
+   *   … RGBを符号付き24bit整数と見て ×0.01m。負の標高は r>=128 で表す
+   * - Terrain-RGB `gbank.gsj.jp/seamless/elev/terrainRGB/{src}/{z}/{y}/{x}.png`
+   *   … `-10000 + (R*65536 + G*256 + B) * 0.1`
+   *
+   * 前者は MapLibre では扱えない。custom 方式は
+   * `r*redFactor + g*greenFactor + b*blueFactor - baseShift` という**線形式のみ**で、
+   * 符号付き24bitの解釈ができないため、海面下の画素が +167km の尖りになる。
+   * 後者は -10000m のオフセットで負の標高を線形に表せるので、
+   * MapLibre の 'mapbox' 方式がそのまま使える。こちらを使っている。
+   */
+  encoding: 'mapbox' | 'terrarium' | 'custom'
+  redFactor?: number
+  greenFactor?: number
+  blueFactor?: number
+  baseShift?: number
+}
+
+export type LayerDef =
+  | RasterDef
+  | WmsDef
+  | GeoJsonPolygonDef
+  | GeoJsonPointDef
+  | ChoroplethDef
+  | TerrainDef
+
+export const isTerrain = (def: LayerDef): def is TerrainDef => def.kind === 'terrain'
 
 // ---- 気象庁 推計震度分布図（250mメッシュ） ----
 /**
@@ -339,20 +386,25 @@ export const LAYERS: LayerDef[] = [
      * 薄端 2.11:1（淡色）/ 7.72:1（暗）、濃端 7.38:1（淡色）/ 2.20:1（暗）で、
      * 淡色・写真・ダークのどの背景でも消えない。
      *
-     * 階級の区切りは対象域 352,267メッシュの実分布に合わせている。
-     * 当初は 1/10/30/100/300/1000 で切っていたが、これは分布と噛み合っておらず、
+     * 階級は4つ。6階級だと隣接の明度差が0.072しか取れず、半透明で基図に重ねたときに
+     * 基図自身の明暗に紛れて「どのメッシュが多いか」が読めなかった。
+     * 4階級にすると明度差が約0.10に広がる。
+     *
+     * 区切りは対象域352,267メッシュの四分位（1/4/12/35）で、各階級の面積が
+     * 19.2 / 30.8 / 24.6 / 25.4 % とほぼ均等になる。
+     * 当初は 1/10/30/100/300/1000 で切っていたが分布と噛み合っておらず、
      * 最も薄い階級だけで45.0%、上位2階級は合わせて0.65%（1000人以上は6メッシュ）
-     * しか入らなかった。ランプの濃い側がほぼ使われず、地図の7割が薄い2色になって
-     * 「どこに人が多いか」が読めない状態だった。
-     * 現在の区切りでの占有率は 25.2 / 30.7 / 21.2 / 14.5 / 7.4 / 1.0 %。
+     * しか入らず、ランプの濃い側がほぼ使われていなかった。
+     * （中央値12人、90%点89人、99%点253人という強い右裾分布）
+     *
+     * 細かい濃淡が要るときは3D（右下の 2D/3D）で高さを見る。高さは連続値なので、
+     * 階級を粗くしても情報は落ちない。
      */
     steps: [
-      { min: 1, color: '#cb9fec', label: '1〜4人' },
-      { min: 5, color: '#bf81eb', label: '5〜14人' },
-      { min: 15, color: '#b067e1', label: '15〜39人' },
-      { min: 40, color: '#9d53cc', label: '40〜99人' },
-      { min: 100, color: '#8649ad', label: '100〜249人' },
-      { min: 250, color: '#6c4288', label: '250人以上' },
+      { min: 1, color: '#ce9cf2', label: '1〜3人' },
+      { min: 4, color: '#b969ee', label: '4〜11人' },
+      { min: 12, color: '#9948ca', label: '12〜34人' },
+      { min: 35, color: '#6e3f8d', label: '35人以上' },
     ],
     // 立体表示（右下の 2D/3D で切替）。1人あたり5mで、色に加えて高さでも量が読める。
     extrude: { metersPerUnit: 5 },
@@ -450,6 +502,36 @@ export const LAYERS: LayerDef[] = [
 
   // ===== 地形・活断層 =====
   {
+    kind: 'terrain',
+    key: 'gsj-terrain',
+    name: '3D地形（シームレス標高タイル）',
+    group: '地形・活断層',
+    on: false,
+    // スライダーは不透明度ではなく標高の誇張率として使う
+    opacity: 1.4,
+    z: 0,
+    tiles: ['https://gbank.gsj.jp/seamless/elev/terrainRGB/mixed/{z}/{y}/{x}.png'],
+    minzoom: 0,
+    /**
+     * z16以降は 400 が返る。z15 も陸域で散発的に 400 になる（八代市街など。
+     * 同一地点で z12〜z14 は安定して 200 なのを実測で確認）。
+     * 穴があるとその範囲だけ平坦になるので、確実に揃う z14 を上限にして
+     * それ以上は MapLibre のオーバーズームに任せる。z14 は北緯32.5度で約8m/px あり、
+     * 元の標高データの分解能より細かいので、これで品質は落ちない。
+     */
+    maxzoom: 14,
+    tileSize: 256,
+    encoding: 'mapbox',
+    slider: { min: 0, max: 3, step: 0.1, label: '標高の誇張', suffix: '倍', scale: 1 },
+    attribution: AIST_ATTR,
+    desc:
+      '産業技術総合研究所 地質調査総合センターのシームレス標高タイル（mixed）で地形を立体化する。' +
+      '兵庫県・国土地理院DEM5各種・ASTER GDEM・GEBCO などを継ぎ目なく合成したデータ。' +
+      'ONにすると視点が傾く（すでに傾けてある場合はそのまま）。スライダーは標高の誇張率。' +
+      '斜面崩壊が起きた地形の急峻さを見るのに使う。z15までのタイルで、それ以上は拡大表示になる。' +
+      'なお地理院タイルと違い、URLの {x} と {y} の順序が逆（{z}/{y}/{x}）。',
+  },
+  {
     kind: 'geojson',
     render: 'polygon',
     key: 'active-fault',
@@ -496,8 +578,28 @@ export const GROUPS = ['震源・揺れ', '人口', '被害状況', '空中写�
 
 export const layerById = (key: string): LayerDef | undefined => LAYERS.find((l) => l.key === key)
 
+/** スライダーの設定。既定は不透明度（0〜1を%表示）。 */
+export function sliderOf(def: LayerDef): { min: number; max: number; step: number; label: string; suffix: string; scale: number } {
+  return def.slider ?? { min: 0, max: 1, step: 0.05, label: '不透明度', suffix: '%', scale: 100 }
+}
+
 // ---- ソース定義 ----
 export function sourceFor(def: LayerDef): SourceSpecification {
+  if (def.kind === 'terrain') {
+    return {
+      type: 'raster-dem',
+      tiles: def.tiles,
+      tileSize: def.tileSize ?? 256,
+      ...(def.minzoom !== undefined ? { minzoom: def.minzoom } : {}),
+      ...(def.maxzoom !== undefined ? { maxzoom: def.maxzoom } : {}),
+      encoding: def.encoding,
+      ...(def.redFactor !== undefined ? { redFactor: def.redFactor } : {}),
+      ...(def.greenFactor !== undefined ? { greenFactor: def.greenFactor } : {}),
+      ...(def.blueFactor !== undefined ? { blueFactor: def.blueFactor } : {}),
+      ...(def.baseShift !== undefined ? { baseShift: def.baseShift } : {}),
+      attribution: def.attribution,
+    } as SourceSpecification
+  }
   if (def.kind === 'pmtiles') {
     return {
       type: 'vector',
@@ -551,6 +653,8 @@ function stepColor(def: ChoroplethDef): ExpressionSpecification {
 }
 
 export function mapLayersFor(def: LayerDef): LayerSpecification[] {
+  // 3D地形は setTerrain で効かせるので描画レイヤーを持たない
+  if (def.kind === 'terrain') return []
   const src = def.key
   const zoom = {
     ...(def.minzoom !== undefined ? { minzoom: def.minzoom } : {}),
@@ -683,6 +787,8 @@ function circleSpecs(def: GeoJsonPointDef): CircleSpec[] {
 
 /** 不透明度スライダーの反映。レイヤー種別ごとに効かせる paint プロパティが違う。 */
 export function opacityUpdates(def: LayerDef, v: number): { id: string; prop: string; value: unknown }[] {
+  // 地形のスライダーは paint ではなく setTerrain の exaggeration（main.ts 側で扱う）
+  if (def.kind === 'terrain') return []
   const src = def.key
   if (def.kind === 'raster' || def.kind === 'wms') {
     return [{ id: `${src}--raster`, prop: 'raster-opacity', value: v }]
@@ -723,7 +829,7 @@ export function extrusionUpdates(def: LayerDef, on: boolean): { id: string; prop
 
 /** クリック判定に使うレイヤー id（ラスタは対象外）。 */
 export function queryableLayerIds(def: LayerDef): string[] {
-  if (def.kind === 'raster' || def.kind === 'wms') return []
+  if (def.kind === 'raster' || def.kind === 'wms' || def.kind === 'terrain') return []
   if (def.kind === 'pmtiles') return [`${def.key}--fill`]
   if (def.render === 'polygon') return [`${def.key}--fill`, `${def.key}--line`]
   const ids = circleSpecs(def).map((_, i) => circleId(def.key, i))
