@@ -30,7 +30,11 @@ jobs:
           cache-dependency-path: viewer/package-lock.json
       - run: npm ci
       - run: npm run build
+      # enablement: true にしておくと、リポジトリ側で Pages を有効化する前に
+      # ワークフローが走っても「Get Pages site failed」で落ちずに自分で有効化する。
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: viewer/dist
