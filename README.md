@@ -2,8 +2,6 @@
 
 2026年7月28日 16時27分頃に発生した**令和8年（2026年）熊本地震**（熊本県熊本地方 深さ16km、M7.1（暫定値）、最大震度7＝宇城市・氷川町）の災害情報レイヤーを、[MapLibre GL JS](https://maplibre.org/) で重ね合わせて閲覧する WebGIS。
 
-背景地図と MapLibre 周りの実装は [mlit-urban-planning-converter](https://github.com/shiwaku/mlit-urban-planning-converter) のビューワを流用している。
-
 ## 収録レイヤー
 
 | グループ | レイヤー | 形式 | 出典 |
