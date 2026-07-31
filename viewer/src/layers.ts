@@ -33,6 +33,10 @@ const AIST_ATTR =
   '<a href="https://gbank.gsj.jp/seamless/elev/" target="_blank" rel="noopener">産業技術総合研究所 地質調査総合センター シームレス標高タイル</a>'
 const HERP_ATTR =
   '<a href="https://www.jishin.go.jp/main/oshirase/20260728_kumamoto.html" target="_blank" rel="noopener">地震調査研究推進本部</a>'
+/** SAR干渉画像は解析が国土地理院、原初データの所有が JAXA。 */
+const SAR_ATTR =
+  '<a href="https://www.gsi.go.jp/uchusokuchi/20260728kumamoto.html" target="_blank" rel="noopener">国土地理院（解析）</a>' +
+  '／<a href="https://www.eorc.jaxa.jp/ALOS/" target="_blank" rel="noopener">JAXA（原初データ所有）</a>'
 
 /** 震央（気象庁 暫定値）: 2026/07/28 16:27 熊本県熊本地方 深さ16km M7.1 */
 export const EPICENTER: [number, number] = [130.65, 32.61]
@@ -296,23 +300,32 @@ const SHINDO_LEGEND: LegendItem[] = [
 ]
 
 // ---- 地理院地図 斜め写真の方向アイコン ----
-// _iconUrl は 181/184/185/186 の4種（撮影方向の概略を示す矢印）。
+// _iconUrl は撮影方向の概略を示す矢印。地区ごとに使われる番号が違い、
+// 八代地区は 181/184/185/186、熊本4地区は 181/182/186/187 の4種（実測）。
 const NANAME_ICON_BASE = 'https://cyberjapandata.gsi.go.jp/portal/sys/v4/symbols'
-const NANAME_ICONS: Record<string, string> = {
-  [`${NANAME_ICON_BASE}/181.png`]: 'naname-181',
-  [`${NANAME_ICON_BASE}/184.png`]: 'naname-184',
-  [`${NANAME_ICON_BASE}/185.png`]: 'naname-185',
-  [`${NANAME_ICON_BASE}/186.png`]: 'naname-186',
-  // データ側は http:// で配信されているため、両方をキーに持たせて取りこぼさない。
-  'http://cyberjapandata.gsi.go.jp/portal/sys/v4/symbols/181.png': 'naname-181',
-  'http://cyberjapandata.gsi.go.jp/portal/sys/v4/symbols/184.png': 'naname-184',
-  'http://cyberjapandata.gsi.go.jp/portal/sys/v4/symbols/185.png': 'naname-185',
-  'http://cyberjapandata.gsi.go.jp/portal/sys/v4/symbols/186.png': 'naname-186',
-}
+const NANAME_SYMBOLS = ['181', '182', '184', '185', '186', '187']
+const NANAME_ICONS: Record<string, string> = Object.fromEntries(
+  NANAME_SYMBOLS.flatMap((n) => [
+    [`${NANAME_ICON_BASE}/${n}.png`, `naname-${n}`],
+    // データ側は http:// で配信されているため、両方をキーに持たせて取りこぼさない。
+    [`http://cyberjapandata.gsi.go.jp/portal/sys/v4/symbols/${n}.png`, `naname-${n}`],
+  ]),
+)
 
 const SUICHOKU_ICONS: Record<string, string> = {
   'https://maps.gsi.go.jp/portal/sys/v4/symbols/081.png': 'suichoku-081',
   'http://maps.gsi.go.jp/portal/sys/v4/symbols/081.png': 'suichoku-081',
+}
+
+/**
+ * 垂直写真のポップアップ。地区によって属性が少し違う
+ * （コース番号は熊本1・2地区にはあり、八代地区には無い）が、
+ * 値の無い行は描かれないので同じ指定を使い回せる。
+ */
+const SUICHOKU_POPUP: PopupSpec = {
+  title: '写真番号',
+  rows: ['写真番号', 'コース番号', '撮影日', '画像', '備考'],
+  html: ['画像', '備考'],
 }
 
 /**
@@ -509,7 +522,7 @@ export const LAYERS: LayerDef[] = [
     icons: SUICHOKU_ICONS,
     iconFallback: 'suichoku-081',
     attribution: GSI_ATTR,
-    popup: { title: '写真番号', rows: ['写真番号', '撮影日', '画像', '備考'], html: ['画像', '備考'] },
+    popup: SUICHOKU_POPUP,
     desc:
       '撮影位置に写真をひも付けた点データ。アイコンをクリックするとサムネイルが開き、さらにクリックすると拡大表示できる。' +
       '速報用写真のため通常の航空カメラによる撮影画像より画質が低く、雲の影響で地上が見えにくい場合がある。',
@@ -531,6 +544,118 @@ export const LAYERS: LayerDef[] = [
     desc:
       'アイコンはカメラのシャッターを切った位置に置かれ、向きは撮影方向の概略を示す。' +
       'クリックするとサムネイルが開き、さらにクリックすると拡大表示できる。雲の影響で地上が見えにくい場合がある。',
+  },
+  {
+    kind: 'geojson',
+    render: 'point',
+    key: 'suichoku-k1',
+    name: '垂直写真 熊本1地区 7/29撮影',
+    group: '空中写真',
+    on: false,
+    opacity: 1,
+    z: 51,
+    data: 'https://maps.gsi.go.jp/xyz/20260729kumamoto_kumamoto1_0729suichoku_sokuho/2/3/1.geojson',
+    icons: SUICHOKU_ICONS,
+    iconFallback: 'suichoku-081',
+    attribution: GSI_ATTR,
+    popup: SUICHOKU_POPUP,
+    desc:
+      '熊本1地区（益城町から阿蘇方面にかけて）の垂直写真127枚。撮影位置に写真をひも付けた点データで、' +
+      'アイコンをクリックするとサムネイルが開き、さらにクリックすると拡大表示できる。' +
+      '八代地区の速報用写真と違い航空カメラ（DMC）による撮影。雲の影響で地上が見えにくい場合がある。',
+  },
+  {
+    kind: 'geojson',
+    render: 'point',
+    key: 'suichoku-k2',
+    name: '垂直写真 熊本2地区 7/29撮影',
+    group: '空中写真',
+    on: false,
+    opacity: 1,
+    z: 52,
+    data: 'https://maps.gsi.go.jp/xyz/20260729kumamoto_kumamoto2_0729suichoku_sokuho/2/3/1.geojson',
+    icons: SUICHOKU_ICONS,
+    iconFallback: 'suichoku-081',
+    attribution: GSI_ATTR,
+    popup: SUICHOKU_POPUP,
+    desc:
+      '熊本2地区（熊本市街から嘉島・御船方面）の垂直写真201枚。撮影位置に写真をひも付けた点データで、' +
+      'アイコンをクリックするとサムネイルが開き、さらにクリックすると拡大表示できる。' +
+      '航空カメラ（UCF）による撮影。雲の影響で地上が見えにくい場合がある。',
+  },
+  {
+    kind: 'geojson',
+    render: 'point',
+    key: 'naname-k4',
+    name: '斜め写真 熊本4地区 7/29撮影',
+    group: '空中写真',
+    on: false,
+    opacity: 1,
+    z: 61,
+    data: 'https://maps.gsi.go.jp/xyz/20260729kumamoto_kumamoto4_0729naname/2/3/1.geojson',
+    icons: NANAME_ICONS,
+    iconFallback: 'naname-185',
+    attribution: GSI_ATTR,
+    popup: { title: '写真番号', rows: ['写真番号', '撮影日時', '画像', '備考'], html: ['画像', '備考'] },
+    desc:
+      '熊本4地区（宇城市・氷川町など最大震度7を観測した一帯）の斜め写真140枚。' +
+      'アイコンはカメラのシャッターを切った位置に置かれ、向きは撮影方向の概略を示す。' +
+      'クリックするとサムネイルが開き、さらにクリックすると拡大表示できる。雲の影響で地上が見えにくい場合がある。',
+  },
+
+  // ===== 地殻変動（SAR干渉解析） =====
+  {
+    kind: 'raster',
+    key: 'sar-alos4-ar',
+    name: 'SAR干渉画像 だいち4号 7/2〜7/30',
+    group: '地殻変動',
+    on: false,
+    opacity: 0.8,
+    z: 24,
+    // 定義は http:// で配信されているが、https でも同じタイルが取れて
+    // Access-Control-Allow-Origin: * が付くことを実測で確認しているため https で参照する。
+    tiles: [
+      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20260702_20260730_u11l_p124f630_640_l12_obd/{z}/{x}/{y}.png',
+    ],
+    minzoom: 5,
+    // maxNativeZoom=15。これ以上は拡大表示になる。
+    maxzoom: 15,
+    tileSize: 256,
+    // 解析範囲は南北に長い1条のストリップ。z11 のタイル到達確認から求めた実測 bbox。
+    bounds: [129.7266, 31.8029, 131.1328, 33.1376],
+    legendImage: 'https://maps.gsi.go.jp/sar/cyberjapan/colorbarAR.png',
+    attribution: SAR_ATTR,
+    desc:
+      'だいち4号（ALOS-4）の2026年7月2日と7月30日の観測データから作られた干渉画像。' +
+      '色1周期が衛星と地表の距離（視線方向）の約12cmの変化に対応し、縞の数だけ地殻変動が生じたことを示す。' +
+      '北行・右方向（東向き）に照射しているため衛星は西側上空にあり、' +
+      '衛星から遠ざかる変動は東向きの動きまたは沈降を意味する。' +
+      '日奈久断層帯の北西側で最大約1m遠ざかり、南東側で最大約10cm近づく変動が捉えられている。' +
+      '干渉が悪い（縞が読めない）範囲や、樹木・水域でノイズが出る範囲がある。',
+  },
+  {
+    kind: 'raster',
+    key: 'sar-alos2-al',
+    name: 'SAR干渉画像 だいち2号 2025/8/12〜7/28',
+    group: '地殻変動',
+    on: false,
+    opacity: 0.8,
+    z: 22,
+    tiles: [
+      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20250812_20260728_u11l_p124f680_l10_obd_mask_offset/{z}/{x}/{y}.png',
+    ],
+    minzoom: 5,
+    maxzoom: 15,
+    tileSize: 256,
+    bounds: [130.0781, 31.8029, 131.1328, 32.9902],
+    legendImage: 'https://maps.gsi.go.jp/sar/cyberjapan/colorbarAL.png',
+    attribution: SAR_ATTR,
+    desc:
+      'だいち2号（ALOS-2）の2025年8月12日と2026年7月28日の観測データから作られた干渉画像。' +
+      '取得間隔が350日と長いため、地震以外の季節変化や植生の影響も含まれる。' +
+      '北行・左方向（西向き）に照射しているため衛星は東側上空にあり、' +
+      '衛星に近づく変動は東向きの動きまたは隆起を意味する。' +
+      '日奈久断層帯の北西側で最大約50cm、南東側で最大約10cm近づく変動が捉えられている。',
   },
 
   // ===== 地形・活断層 =====
@@ -577,7 +702,7 @@ export const LAYERS: LayerDef[] = [
 ]
 
 /** パネルに出すグループの順序。LAYERS に無いグループは無視される。 */
-export const GROUPS = ['震源・揺れ', '人口', '被害状況', '空中写真', '地形・活断層'] as const
+export const GROUPS = ['震源・揺れ', '人口', '被害状況', '空中写真', '地殻変動', '地形・活断層'] as const
 
 export const layerById = (key: string): LayerDef | undefined => LAYERS.find((l) => l.key === key)
 
