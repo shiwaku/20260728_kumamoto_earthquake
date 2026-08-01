@@ -33,6 +33,8 @@ const AIST_ATTR =
   '<a href="https://gbank.gsj.jp/seamless/elev/" target="_blank" rel="noopener">産業技術総合研究所 地質調査総合センター シームレス標高タイル</a>'
 const HERP_ATTR =
   '<a href="https://www.jishin.go.jp/main/oshirase/20260728_kumamoto.html" target="_blank" rel="noopener">地震調査研究推進本部</a>'
+const MLIT_ATTR =
+  '<a href="https://www.mlit.go.jp/road/saigai/r8kumamoto/index.html" target="_blank" rel="noopener">国土交通省「通れるマップ」</a>'
 /** SAR干渉画像は解析が国土地理院、原初データの所有が JAXA。 */
 const SAR_ATTR =
   '<a href="https://www.gsi.go.jp/uchusokuchi/20260728kumamoto.html" target="_blank" rel="noopener">国土地理院（解析）</a>' +
@@ -480,6 +482,34 @@ export const LAYERS: LayerDef[] = [
     desc:
       '7月29日撮影の正射画像を判読して作成（長さまたは幅がおおむね30m以上）。' +
       '現地調査は行われていないため、崩壊箇所が抜けていたり、本地震によらない箇所を含むことがある。',
+  },
+  {
+    kind: 'geojson',
+    render: 'polygon',
+    key: 'road-restriction',
+    name: '道路規制（7/31 7:30時点）',
+    group: '被害状況',
+    on: false,
+    opacity: 1,
+    // 斜面崩壊より前面。線なので面に隠れないようにする。
+    z: 45,
+    data: `${import.meta.env.BASE_URL}data/mlit/road_restriction.geojson`,
+    legend: [
+      { label: '全面通行止め（47区間）', color: '#e60012', shape: 'line' },
+      { label: '通行止め解除（2区間）', color: '#00a040', shape: 'line' },
+      { label: '区分不明（13区間）', color: '#9e9e9e', shape: 'line' },
+    ],
+    attribution: MLIT_ATTR,
+    popup: {
+      title: '路線名',
+      rows: ['状態', '道路種別', '規制理由', '区間', '規制開始', '延長', '場所'],
+    },
+    desc:
+      '「通れるマップ」の7/31 8時公開データ（規制情報は7/31 7:30時点）。' +
+      '2ファイルに分かれた規制を重複を除いて統合した62区間。' +
+      '色は規制内容から引き直している（配信元の色は同梱凡例の「事前／被災」の区分と' +
+      '一致しないため）。灰色の13区間は配信元に属性がなく、路線名も状態も分からない。' +
+      '主に国道・主要地方道・一般県道が対象で、市町村道は網羅されていない。',
   },
 
   // ===== 空中写真 =====
