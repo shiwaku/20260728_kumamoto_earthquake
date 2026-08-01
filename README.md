@@ -1,6 +1,6 @@
 # 令和8年（2026年）熊本地震 災害情報ビューワ
 
-2026年7月28日 16時27分頃に発生した**令和8年（2026年）熊本地震**（熊本県熊本地方 深さ16km、M7.1（暫定値）、最大震度7＝宇城市・氷川町）の災害情報レイヤーを、[MapLibre GL JS](https://maplibre.org/) で重ね合わせて閲覧する WebGIS。
+2026年7月28日 16時27分に発生した**令和8年（2026年）熊本地震**（熊本県熊本地方 深さ16km、M7.1 暫定値、最大震度7＝宇城市・氷川町）の災害情報レイヤーを、[MapLibre GL JS](https://maplibre.org/) で重ね合わせて閲覧する WebGIS。
 
 ## 収録レイヤー
 
@@ -21,35 +21,28 @@
 | 地形・活断層 | 全国の主要活断層帯 | GeoJSON（同梱・3,248地物） | 地震調査研究推進本部 | ON |
 | 地形・活断層 | 活断層図（都市圏活断層図） | ラスタタイル | 国土地理院 | |
 
-背景地図は国土地理院の**最適化ベクトルタイル**（淡色。ダークテーマは明度反転で生成）と**全国最新写真**を切り替えられる。
-**3D地形**は右上の山アイコン（MapLibre 標準の `TerrainControl`）で切り替える。レイヤーパネルには出していない。
-地図の傾きは最大85度まで倒せる（`maxPitch: 85`）。
-
-ダークテーマでは MapLibre のコントロールアイコンを明色に差し替えている（`fill` が `#333` 固定のため）。
-対象は ズーム± / コンパス / 現在地 / **3D地形の山アイコン** / 出典の ⓘ。
-3D地形の作動中だけは `#33b5e5` の水色なので暗背景でも読め、差し替えていない。
-
-デスクトップではスケールバーを左パネルの右へ逃がしている（幅300pxぶん）。
-パネルと地図コントロールがどちらも `z-index: 2` で、DOM で後ろにあるパネルが勝つため、
-そのままだとスケールバーがパネルの裏に隠れる。モバイルはパネルが下部のボトムシートに
-なりスケールバーはその上に出るので、ずらしていない。
+背景地図は国土地理院の最適化ベクトルタイル（淡色）と全国最新写真、3D地形は産総研のシームレス標高タイル。
+配信元が CORS を返すレイヤーは実行時に直接参照し、同梱は[3つだけ](#同梱データ)。
 
 ### データの出どころ
 
-- 国土地理院「[令和8年（2026年）熊本地震に関する情報](https://www.gsi.go.jp/BOUSAI/20260728_kumamoto_earthquake.html)」
-  レイヤーの URL・ズーム範囲は地理院地図のレイヤー定義 `https://maps.gsi.go.jp/layers_txt/layers_20260729kumamoto.txt` に準拠。
-- 気象庁「[推計震度分布図](https://www.jma.go.jp/bosai/map.html)」（250mメッシュ）
-  索引 `https://www.jma.go.jp/bosai/estimated_intensity_map/data/list.json` の
-  `202607281627_741`（2026/07/28 16:27 熊本県熊本地方 M7.1 最大計測震度6.6）。
-- 地震調査研究推進本部「全国の主要活断層帯」
-  地理院地図のレイヤー `active_fault_jishinhonbu`（`https://maps.gsi.go.jp/xyz/active_fault/2/3/1.geojson`）。
-- 産業技術総合研究所 地質調査総合センター「[シームレス標高タイル](https://gbank.gsj.jp/seamless/elev/)」
-  `https://gbank.gsj.jp/seamless/elev/terrainRGB/mixed/{z}/{y}/{x}.png`。
-- 国土地理院「[2026年7月28日令和8年熊本地震に伴う地殻変動](https://www.gsi.go.jp/uchusokuchi/20260728kumamoto.html)」（SAR干渉画像）
-  レイヤー定義は `https://maps.gsi.go.jp/sar/layers_txt/layers_alos2_eq_20260728kumamoto.txt`、
-  タイルは `https://insarmap.gsi.go.jp/xyz/...`。原初データ所有は JAXA。
+| 出典 | 参照先 |
+| --- | --- |
+| 国土地理院「[令和8年（2026年）熊本地震に関する情報](https://www.gsi.go.jp/BOUSAI/20260728_kumamoto_earthquake.html)」 | レイヤー定義 `maps.gsi.go.jp/layers_txt/layers_20260729kumamoto.txt` |
+| 気象庁「[推計震度分布図](https://www.jma.go.jp/bosai/map.html)」 | 索引 `.../estimated_intensity_map/data/list.json` のイベント `202607281627_741` |
+| 地震調査研究推進本部「全国の主要活断層帯」 | `maps.gsi.go.jp/xyz/active_fault/2/3/1.geojson` |
+| 産総研 地質調査総合センター「[シームレス標高タイル](https://gbank.gsj.jp/seamless/elev/)」 | `gbank.gsj.jp/seamless/elev/terrainRGB/mixed/{z}/{y}/{x}.png` |
+| 国土地理院「[熊本地震に伴う地殻変動](https://www.gsi.go.jp/uchusokuchi/20260728kumamoto.html)」（SAR） | レイヤー定義 `maps.gsi.go.jp/sar/layers_txt/layers_alos2_eq_20260728kumamoto.txt` |
 
-## セットアップ
+## ビューワの操作
+
+- **レイヤーパネル**（デスクトップは左、モバイルはボトムシート） … トグル、`i` で説明、
+  ON のあいだだけ不透明度スライダーと凡例。全ON／全OFF、▴▾ で開閉
+- **背景地図**（右下）「地図」／「写真」、**テーマ**（🌙 ☀️）、**3D地形**（右上の山アイコン）
+- **ポップアップ** … 点・面をクリックで属性。空中写真はサムネイル → クリックで拡大
+- **URL ハッシュ**に位置・ズーム・傾き・向きが入る。`?debug` で右上に診断 HUD
+
+## セットアップと公開
 
 ```sh
 cd viewer
@@ -58,313 +51,93 @@ npm run dev      # http://localhost:8000
 npm run build    # tsc --noEmit && vite build → viewer/dist
 ```
 
-## 公開
-
-`main` への push で GitHub Actions（`.github/workflows/deploy.yml`）が `viewer/` をビルドし、GitHub Pages へデプロイする。
-Vite の `base` は `'./'` にしてあるため、プロジェクトページ（`/<repo>/` 配下）でもそのまま動く。
-
-初回のみ、リポジトリの **Settings → Pages → Source** を **GitHub Actions** に設定する必要がある。
+`main` への push で GitHub Actions（`.github/workflows/deploy.yml`）が GitHub Pages へデプロイする。
+Vite の `base` は `'./'` なのでプロジェクトページ（`/<repo>/` 配下）でも動く。
+初回のみ **Settings → Pages → Source** を **GitHub Actions** にする。
 
 ## レイヤーの追加
 
 `viewer/src/layers.ts` の `LAYERS` に 1 エントリ足すだけでよい。`main.ts` は `kind` だけを見て
-汎用的に地図へ載せるので、レイヤーごとの分岐を書き足す必要はない。
+汎用的に地図へ載せるので、レイヤーごとの分岐は要らない。
 
-対応している `kind`:
-
-- `raster` … XYZ ラスタタイル（地理院タイル等）。`bounds` を書くと範囲外を取りに行かない
-- `wms` … `{bbox-epsg-3857}` を使った WMS（[MapLibre の作法](https://maplibre.org/maplibre-gl-js/docs/examples/add-a-wms-source/)どおり。**ただし CORS を返すサーバに限る**）
-- `geojson` … `render: 'polygon'`（面。LineString が混在していても線として描かれる）/
-  `render: 'point'`（`icons` でアイコン画像、`circle` で円マーカー。`data` は URL でもインラインの
-  FeatureCollection でもよい）
-- `pmtiles` … PMTiles のベクタタイルを1属性の階級区分（コロプレス）で塗る。
-  `prop` に対象属性、`steps` に `{min, color, label}` を昇順で並べると、
-  MapLibre の `step` 式と凡例の両方がそこから作られる（塗り分けと凡例が食い違わない）。
-  `extrude` を付けると立体表示（右下の 2D/3D で切替）に対応する
-
-パネルのグループ見出しは `group`、その並び順は同ファイルの `GROUPS`（`震源・揺れ` / `人口` /
-`被害状況` / `空中写真` / `地殻変動` / `地形・活断層`）。`GROUPS` に無いグループは表示されない。
-
-## 3D地形（産総研 シームレス標高タイル）
-
-レイヤーパネルには出さず、**MapLibre 標準の `TerrainControl`**（右上の山アイコン）で
-切り替える。設定は `layers.ts` の `TERRAIN`（レイヤーレジストリとは別）。
-`TerrainControl` は `setTerrain` するだけなので、`raster-dem` ソースは常にスタイルへ
-入れておく（terrain が無効な間はタイルを取りに行かないので置いておく負荷は無い）。
-誇張率は1.4倍固定。
-
-産総研は同じ標高を**2つの形式**で配信していて、**Terrain-RGB のほうを使っている**。
-
-| 形式 | URL | 標高の求め方 |
-| --- | --- | --- |
-| PNG標高タイル | `tiles.gsj.jp/tiles/elev/{src}/{z}/{y}/{x}.png` | RGBを符号付き24bit整数と見て ×0.01m |
-| **Terrain-RGB** | `gbank.gsj.jp/seamless/elev/terrainRGB/{src}/{z}/{y}/{x}.png` | `-10000 + (R*65536 + G*256 + B) * 0.1` |
-
-前者は MapLibre では扱えない。MapLibre の `encoding: 'custom'` は
-`r*redFactor + g*greenFactor + b*blueFactor - baseShift` という**線形式のみ**で、
-符号付き24bitの解釈（`r>=128` を負とみなす）ができない。そのため海面下の画素が
-+167km の尖りになる。後者は -10000m のオフセットで負の標高を線形に表せるので、
-`encoding: 'mapbox'` がそのまま使える。
-
-どちらも `Access-Control-Allow-Origin: *` を返すので実行時に直接参照している。
-
-- **URLの `{x}` と `{y}` の順序が地理院タイルと逆**（`{z}/{y}/{x}`）
-- `maxzoom` は **14**。z16以降は 400 が返り、z15 も陸域で散発的に 400 になる
-  （八代市街など。同一地点で z12〜z14 は安定して 200 なのを実測で確認）。
-  穴があるとその範囲だけ平坦になるので、確実に揃う z14 を上限にして
-  それ以上はオーバーズームに任せている。z14 は北緯32.5度で約8m/px
-- 復号の検証: 阿蘇 1419.7m / 熊本市中心部 10.7m / 有明海 0m / 八代の崩壊地 476.1m。
-  対象域1,258点を走査して -155.6〜1530.4m、**スパイクなし**
-- 背景スタイルを差し替えるとソースも terrain も消えるので、`reloadStyle()` で
-  状態を覚えて戻している
-
-ポップアップは `popup` で組み立てる。`title` にタイトルへ使う属性、`rows` に出す属性の順序、
-`labels` に見出しの読み替え、`html` にエスケープせず埋め込む属性（地理院の写真レイヤーは
-属性値そのものが `<img>` を含む HTML）を書く。
-
-`z` が重なり順（大きいほど前面）、`group` がパネルの見出し。凡例は `legend`（色と label の配列）か
-`legendImage`（配布されている凡例画像の URL）で与える。
-
-### 地理院地図の GeoJSON レイヤーについて
-
-地理院地図の災害 GeoJSON は **cocotile** 方式（`maxNativeZoom: 2`）で、対象地区を含む
-z=2 タイル 1 枚に全地物が入っている。そのため MapLibre では `{z}/{x}/{y}` を使わず、
-その 1 枚を `geojson` ソースの `data` に直接指定している。
-
-地物ごとに Leaflet 用のスタイル属性（`_fillColor` / `_color` / `_fillOpacity` / `_weight`）を
-持っているので、配色を独自に決め直さず、データ駆動でその値をそのまま使っている。
-
-## 気象庁の推計震度分布図をタイル化している理由
-
-気象庁は推計震度分布図を、**1次地域メッシュごとの PNG 画像**として配信している。
-
-```
-索引: https://www.jma.go.jp/bosai/estimated_intensity_map/data/list.json
-画像: https://www.jma.go.jp/bosai/estimated_intensity_map/data/<url>/<1次メッシュ4桁>.png
-```
-
-索引の各要素が1つの地震にあたり、`url`（例 `202607281627_741`）、画像が存在する
-1次メッシュの一覧 `mesh_num`、範囲 `bounds`、震度階級ごとのメッシュ数 `rank_cnt` を持つ。
-PNG は1枚 800×800px で、1次メッシュ（緯度2/3度 × 経度1度）を覆う。
-
-`Access-Control-Allow-Origin: *` が付くのでブラウザから直接読むこともできるが、
-
-- MapLibre の image ソースは4隅をメルカトル平面上で線形に張るため、緯度2/3度ぶんの
-  緯度方向の歪み（100m前後）が出る
-- 17枚を17個のソースとして並べる形になり、レイヤー定義が煩雑になる
-
-ので、GDAL で正しく再投影してタイルに焼き、他のレイヤーと同じ raster として扱っている。
-
-```sh
-python3 tools/fetch_jma_shindo_tiles.py                     # 既定イベント
-python3 tools/fetch_jma_shindo_tiles.py --list              # 索引から候補を表示
-python3 tools/fetch_jma_shindo_tiles.py --event 202607281627_741
-```
-
-- 出力先: `viewer/public/data/jma_shindo/{z}/{x}/{y}.png` と `metadata.json`（958タイル・1.5MB、z5-z11）
-- 配信 PNG は **8bit パレットと 16bit RGBA が混在**しているため、
-  そのまま VRT にまとめると band 構成が揃わず gdal2tiles が受け付けない。
-  先に Pillow で 8bit RGBA へ正規化している
-- 階級色をぼかさないよう `-r near` で縮小している（平均だと凡例に無い中間色が出る）
-
-### 配色は防災科研 J-RISQ のものに置き換えている
-
-**震度の値は気象庁のまま**で、色だけ差し替えている。気象庁の配色は震度4が `#fae696`
-（OKLCH L=0.92 のごく淡いクリーム）から震度7の `#b40068` まで暖色に寄っており、
-面積の大半を占める震度4〜5弱が淡くて階級差が読みにくい。
-
-配信 PNG は色が焼き込まれているので、`--palette jrisq`（既定）で
-
-1. 各画素を気象庁の6階級色のうち**最近傍**へ割り当てて再分類する
-   （境界がアンチエイリアスされていて中間色を数百種持つため、完全一致の置換では
-   縁だけ元の色が残る。再分類するとアンチエイリアスは失われるが、階級図としてはそのほうが正しい）
-2. 対応する J-RISQ の色へ置き換える
-
-という処理をしている。気象庁の配色に戻すなら `--palette jma` で焼き直し、
-`layers.ts` の `SHINDO_LEGEND` も元の6色に戻す。
-
-| 震度 | 気象庁 | J-RISQ（現行） |
-| --- | --- | --- |
-| 7 | `#b40068` | `#950d05` |
-| 6強 | `#a50021` | `#f45178` |
-| 6弱 | `#ff2800` | `#faaa46` |
-| 5強 | `#ff9900` | `#f7f618` |
-| 5弱 | `#ffe600` | `#96d050` |
-| 4 | `#fae696` | `#1e973d` |
-
-置き換え後の画素数の比は配信 PNG とほぼ一致する（震度4が72.0%で最多、以下
-17.3 / 6.1 / 2.9 / 1.6 / 0.04%）。気象庁の色は1画素も残っていないことを確認済み。
-
-なお最近傍の距離計算を int16 でやると 255²×3 = 195,075 が上限 32,767 を超えて
-巻き上がり、階級の分布が逆転する（実際にそれで震度6弱が最多になった）。int32 で計算している。
-
-### このデータは震度4以上しか塗られていない
-
-実測で、震度1〜3の公式色（`#f2f2ff` / `#00aaff` / `#0041ff`）は1画素も含まれない。
-索引の `rank_cnt` には震度1が564,012メッシュ、震度2が298,272メッシュなどと入っているが、
-**図には出てこない**。弱い揺れの及んだ範囲まで面で見たい場合はこのデータでは足りない。
-
-その用途では防災科研 J-RISQ の推計震度分布（推定震度0〜7）が使える。当初はそちらを
-使っており、`tools/fetch_jrisq_tiles.py` と原本 `raw/jrisq/*.kml` を残してある。
-ただし J-RISQ の WMS は **`Access-Control-Allow-Origin` を返さない**ため、
-GitHub Pages のような別オリジンからは全リクエストが遮断される
-（実測: 90リクエストすべて `net::ERR_FAILED`）。使うならタイル化して同梱する必要がある。
-
-なお国土地理院のタイル・GeoJSON は `Access-Control-Allow-Origin: *` を返すため、
-こちらは基本的に取り込みせず実行時に直接参照している（例外は次項）。
-
-## 主要活断層帯を圧縮して同梱している理由
-
-配信元 `https://maps.gsi.go.jp/xyz/active_fault/2/3/1.geojson` は CORS を返すので直接参照もできる。
-ただしこのファイルはインデント付きで **2.36MB あり、しかも配信側が gzip を返さない**。
-レイヤーを ON にするたび 2.36MB を素で転送することになるため、座標を5桁（約1m）に丸めた
-compact JSON にして同梱している。GitHub Pages は静的ファイルを圧縮して返すので、
-実転送量は **約160KB**（元の1/14）に収まる。災害時に配信元が重い場合でも表示できる利点もある。
-
-```sh
-python3 tools/build_active_fault.py                    # 配信元から取得して生成
-python3 tools/build_active_fault.py --input raw/gsi/active_fault_jishinhonbu.geojson
-```
-
-データの構造には癖がある。
-
-- LineString 3,085本 … 断層線本体（`_color: #3388ff` / `_weight: 3`）。**属性に名称を持たない**
-- Polygon 163面 … 断層帯の名称を持つ**不可視**の領域（`_opacity: 0` / `_fillOpacity: 0`）。
-  地理院地図ではクリックして名称を出すための当たり判定として使われている。
-  `name`（135種）と `description`（55種）はこちらにしか無い
-
-そのため、クリック時は「`_` 始まり以外の属性を持つ地物」を優先して選ぶようにしている
-（先頭決め打ちだと、線に当たったときに空のポップアップになる）。
-
-## 夜間人口メッシュを作り直している理由
-
-国勢調査2020の125mメッシュ人口は、別プロジェクト `japan-mobility-ease-diagnosis` の
-食料品アクセス分析で全国版 PMTiles（`output/food_desert_125m.pmtiles`）が作られている。
-ただし **311MB あり GitHub の1ファイル100MB上限を超える**。食料品店までの距離という
-本件に無関係な高エントロピー属性が入っていることもサイズを押し上げている。
-
-そこで同じ parquet から、人口3項目だけに絞って揺れた範囲へ切り出し直している。
-
-```sh
-python3 tools/build_population_mesh.py
-python3 tools/build_population_mesh.py --bbox 129.8 31.5 131.6 33.5
-```
-
-- 入力: `../japan-mobility-ease-diagnosis/output/food_desert_125m.parquet`
-  （**このリポジトリの外**にあるので、他の環境でそのままは再現できない）
-- 出力: `viewer/public/data/census/pop_mesh125.pmtiles`（19MB、レイヤー名 `pop_mesh`、
-  属性 `pop` / `pop65` / `pop75`）
-- 範囲: 揺れの及んだ九州中北部（129.5-132.0E / 31.0-33.8N）、
-  359,259メッシュ・総人口1,141万人
-- ズーム: z9-z14。低ズームでは125mメッシュが1画素未満になるため
-  `--coalesce-densest-as-needed` で隣接メッシュを統合し、`--accumulate-attribute` で
-  人口を合算している。**そのため低ズームでは1区画の値が125mメッシュ1つ分より大きくなる**
-
-### 階級配色
-
-逐次パレット（1色相・明度単調）。OKLCH の色相310°を保ち、明度 0.80→0.44 を
-等間隔に落として彩度を中間で最大にしたもの。
-
-色相が紫〜マゼンタ帯なのは、**他レイヤーと衝突しない帯**だから。実測した OKLCH 色相は
-
-| レイヤー | 色相 |
+| `kind` | 内容 |
 | --- | --- |
-| 推計震度（J-RISQ配色） | 震度7 30° / 6強 10° / 6弱 65° / 5強 105° / 5弱 125° / 震度4 150° |
-| 主要活断層帯の線 | 258° |
-| **夜間人口** | **310°** |
+| `raster` | XYZ ラスタタイル。`bounds` を書くと範囲外を取りに行かない |
+| `wms` | `{bbox-epsg-3857}` を使った WMS（[MapLibre の作法](https://maplibre.org/maplibre-gl-js/docs/examples/add-a-wms-source/)どおり。**CORS を返すサーバに限る**） |
+| `geojson` | `render: 'polygon'`（LineString が混在していても線として描く）／`render: 'point'`（`icons` か `circle`）。`data` は URL でもインラインの FeatureCollection でもよい |
+| `pmtiles` | ベクタタイルを1属性の階級区分で塗る。`prop` と `steps`（`{min, color, label}` 昇順）から `step` 式と凡例の両方を作る。`extrude` を付けると `fill-extrusion` で描き、属性値 × `metersPerUnit` が高さになる（**常に立体**。2D/3D の切替は無い） |
 
-で、夜間人口はどの震度階級からも100°以上、活断層線（258°）から52°離れている。
+共通の指定は `z`（重なり順・大きいほど前面）、`group`（パネルの見出し。順序は `GROUPS`、そこに無いものは非表示）、
+`legend` か `legendImage`（階級区分は `steps` から自動生成）、`popup`（`title` / `rows` / `labels` /
+`html` = エスケープせず埋め込む属性）、`desc`（`i` の説明）、`attribution`。
 
-当初は ColorBrewer の Purples をそのまま使っていたが、逐次パレットの検査で2項目落ちていた。
+地理院地図の災害 GeoJSON は cocotile 方式（`maxNativeZoom: 2`）なので、対象地区を含む z=2 タイル1枚を
+`data` に直接指定する。地物が持つ Leaflet 用のスタイル属性（`_fillColor` / `_color` / `_fillOpacity` /
+`_weight`）は配色を決め直さずそのまま使う。
 
-| 項目 | 旧（ColorBrewer Purples） | 現行 |
+## 同梱データ
+
+直接参照できない・しないほうがよい3つだけを `viewer/public/data/` に置いている。
+
+| データ | 同梱する理由 | 生成 |
 | --- | --- | --- |
-| 明度単調 | PASS | PASS |
-| 隣接ΔL（下限0.06） | **FAIL** 最薄2階級が0.056 | PASS |
-| 薄端コントラスト（下限2:1） | **FAIL** 1.13:1 | PASS 2.11:1 |
-| 単一色相 | PASS | PASS |
+| 推計震度分布<br>z5-z11・958タイル・約0.9MB | 気象庁は1次メッシュごとの PNG で配信していて、MapLibre の image ソースだと緯度方向に100m前後歪む。GDAL で再投影してタイルに焼いている | `tools/fetch_jma_shindo_tiles.py` |
+| 主要活断層帯<br>3,248地物・869KB | 配信元はインデント付き2.36MBで gzip も返らない。座標を5桁に丸めた compact JSON にして実転送 約160KB | `tools/build_active_fault.py` |
+| 夜間人口メッシュ<br>359,259メッシュ・19MB | 元の全国版 PMTiles は311MBで GitHub の100MB上限を超える。人口3項目だけに絞って揺れた範囲へ切り出し | `tools/build_population_mesh.py` |
 
-最も薄い2階級が見分けられず、最も薄い色は淡色背景でほぼ見えていなかった。
-現行（4階級）は `#ce9cf2` / `#b969ee` / `#9948ca` / `#6e3f8d` で、
-薄端 2.12:1（淡色）/ 7.68:1（暗）、濃端 7.42:1（淡色）/ 2.19:1（暗）。
-**淡色・写真・ダークのどの背景でも消えない**。
+使うときに知っておくとよい癖:
 
-### 階級区切り
+- **推計震度は震度4以上しか塗られていない**（震度1〜3の公式色は1画素も含まれないことを実測で確認）。
+  弱い揺れまで見たいなら防災科研 J-RISQ だが、WMS が CORS を返さず別オリジンから読めない
+  （予備に `tools/fetch_jrisq_tiles.py` と `raw/jrisq/*.kml` を残してある）
+- **推計震度の配色は J-RISQ のものに置き換えている**（値は気象庁のまま）。気象庁の配色は面積の大半を
+  占める震度4〜5弱が淡くて階級差が読みにくい。戻すなら `--palette jma` で焼き直して `SHINDO_LEGEND` も戻す
+- **主要活断層帯は断層線が名称を持たない**。名称は不可視ポリゴン163面（`name` 134種／`description` 54種）
+  の側にしかないので、クリック時は `_` 始まり以外の属性を持つ地物を優先して選んでいる
+- **夜間人口は低ズームでメッシュが統合される**（`--coalesce-densest-as-needed`）。人口は合算されるので、
+  1区画の値も3Dの高さも125mメッシュ1つ分より大きくなる。人口0は描かず、実際に描かれるのは352,267メッシュ
+- 夜間人口の入力 parquet は `../japan-mobility-ease-diagnosis/` にあり、**このリポジトリの外**
 
-区切りは対象域352,267メッシュの実分布に合わせている。当初は 1/10/30/100/300/1000 で
-切っていたが分布と噛み合わず、最も薄い階級だけで45.0%、上位2階級は合わせて0.65%
-（1000人以上は6メッシュ）しか入らなかった。ランプの濃い側がほぼ使われず、
-地図の7割が薄い2色になって「どこに人が多いか」が読めない状態だった。
+## 設計メモ
 
-| 区切り | 各階級の占有率 |
-| --- | --- |
-| 当初 1/10/30/100/300/1000 | 45.0 / 26.6 / 19.9 / 7.8 / **0.7** / **0.0** % |
-| 6階級 1/5/15/40/100/250 | 25.2 / 30.7 / 21.2 / 14.5 / 7.4 / 1.0 % |
-| **現行 4階級 1/4/12/35** | **19.2 / 30.8 / 24.6 / 25.4 %** |
+込み入った判断はソース側のコメントに書いてある。ここは索引。
 
-（中央値12人、90%点89人、99%点253人という強い右裾分布）
+| 判断 | 理由 | 詳細 |
+| --- | --- | --- |
+| 3D地形は産総研の Terrain-RGB（PNG標高タイルではない） | MapLibre の `encoding: 'custom'` は線形式のみで符号付き24bitを解釈できず、海面下が +167km の尖りになる | `layers.ts` `TERRAIN` |
+| 3D地形の `maxzoom` は 14、`{z}/{y}/{x}` 順 | z15以降は 400 が散発し、穴があるとその範囲だけ平坦になる。URL の x/y は地理院タイルと逆 | 同上 |
+| 3D地形はパネルに出さず `TerrainControl` | ソースは常時スタイルに入れておく（無効な間はタイルを取らない）。スタイル差し替えで消えるので `reloadStyle()` で戻す | `main.ts` |
+| 夜間人口は色相310°の4階級 | 推計震度（10〜150°）と活断層線（258°）に挟まれた唯一の空き。6階級では明度差が足りず基図に紛れる | `layers.ts` `pop-mesh` |
+| 夜間人口の区切りは 1/4/12/35 | 対象域の四分位。当初の 1/10/30/100/300/1000 は上位2階級に0.65%しか入らなかった | 同上 |
+| 夜間人口は常に立体・ONで自動的に傾ける | 密集市街地は最上位階級が支配的になるので、内部の差は高さで読む | 同上 |
+| SAR は `https://` へ書き換え、実測 bbox を `bounds` に入れて直接参照 | 定義は `http://` だが https でも同じタイルが返る。解析範囲が定義に無いので z11 の到達確認から実測 | `layers.ts` `sar-*` |
+| ダークテーマでコントロールアイコンを差し替え | MapLibre のアイコンは `fill` が `#333` 固定 | `style.css` |
+| デスクトップはスケールバーを右へ300pxずらす | パネルと地図コントロールが同じ `z-index: 2` で、DOM で後ろのパネルが勝つ | 同上 |
 
-6階級では隣接の明度差が0.072しか取れず、半透明で基図に重ねると基図自身の明暗に紛れて
-「どのメッシュが多いか」が読めなかった。4階級（四分位）にすると明度差が約0.10に広がる。
-色相は290〜340°しか選べない（青緑系はsRGBで本質的に明るく、必要な明度幅を保ったまま
-薄端のコントラストを確保できないため全滅する）ので、判別性は階級数で稼いでいる。
-
-**密集市街地では最上位階級が支配的になる**（熊本市中心部はほぼ全メッシュが35人以上）。
-市街地内部の差は3Dの高さで読む。高さは連続値なので階級を粗くしても情報は落ちない。
-
-不透明度の既定を0.9にしているのは、コントラストの検査を不透明度100%で通しているため。
-下げすぎると設計した段差が背景に溶ける。3Dでは半透明の柱が重なると前後が混ざる
-（MapLibre は半透明の押し出しを深度順に描かない）ので、これも高めが要る。
-
-### 立体表示
-
-**常に立体**（`fill-extrusion`、1人あたり5m）で描いている。2D/3D の切替ボタンは持たない。
-色の明暗より高さのほうが量の差が読みやすいので、どのメッシュに人が多いかは高さで見る。
-
-真上から見ていると高さが分からないので、**このレイヤーを ON にしたとき水平なら自動で傾ける**
-（pitch 48度、3D地形が入っていれば62度）。すでに傾けてある場合はそのまま。
-
-低ズームではメッシュ統合で人口が合算されるため、高さも1メッシュ分より大きくなる。
-
-## SAR干渉画像（insarmap.gsi.go.jp）について
-
-だいち2号・だいち4号の干渉画像は、地理院地図のレイヤー定義
-`https://maps.gsi.go.jp/sar/layers_txt/layers_alos2_eq_20260728kumamoto.txt` にある2枚を、
-ラスタタイルとして実行時に直接参照している。同梱していない。
-
-- 定義の `url` は **`http://`** だが、`https://` でも同じタイルが返り、`Access-Control-Allow-Origin: *`
-  が付く（実測）。ページが https なので https へ書き換えて参照している
-- `maxNativeZoom: 15` なので `maxzoom: 15`。それ以上は拡大表示になる
-- 解析範囲は南北に長い1条のストリップで、レイヤー定義には範囲が書かれていない。
-  z11 のタイル到達確認から実測した bbox を `bounds` に入れて、範囲外を取りに行かないようにしている
-  - だいち4号（AR）: `129.7266, 31.8029, 131.1328, 33.1376`
-  - だいち2号（AL）: `130.0781, 31.8029, 131.1328, 32.9902`
-- **bbox 内でも斜めのストリップから外れたタイルは 404 になる**。この 404 レスポンスには
-  `Access-Control-Allow-Origin` が付かないため、ブラウザのコンソールには 404 ではなく
-  CORS エラーとして出る。タイルが存在しないだけで、描画には影響しない
-- 凡例は配信元のカラーバー画像（`colorbarAR.png` / `colorbarAL.png`）をそのまま `legendImage` に指定している。
-  色1周期が視線方向の約12cmの変化に対応し、AR と AL で「近づく／遠ざかる」の向きが逆になる
+コンソールに出るが無害なもの: SAR は bbox 内でもストリップから外れたタイルが 404 になり、
+その 404 に CORS ヘッダが付かないため CORS エラーとして表示される。描画には影響しない。
 
 ## リポジトリ構成
 
 ```
-.github/workflows/deploy.yml   GitHub Pages へのデプロイ
-raw/                           取得した原本（J-RISQ の KML、主要活断層帯の GeoJSON）
-tools/fetch_jma_shindo_tiles.py 気象庁 推計震度分布図 → 静的 XYZ タイル
-tools/fetch_jrisq_tiles.py     （予備）防災科研 J-RISQ の WMS → 静的 XYZ タイル
-tools/build_active_fault.py    主要活断層帯 GeoJSON の圧縮
-tools/build_population_mesh.py 国勢調査125mメッシュ人口 → PMTiles（対象域に切り出し）
-tools/make_icons.py            ファビコン・アプリアイコンの生成
-viewer/src/layers.ts           レイヤーレジストリ（ここに足す）
-viewer/src/main.ts             kind を見てレイヤーを載せる汎用エンジン
-viewer/src/basemap.ts          背景地図（淡色ベクター／写真、ダークは明度反転）
-viewer/public/data/            同梱データ（推計震度タイル、主要活断層帯、夜間人口メッシュ）
+.github/workflows/deploy.yml    GitHub Pages へのデプロイ
+raw/                            取得した原本（J-RISQ の KML、主要活断層帯の GeoJSON）
+tools/                          同梱データの生成スクリプトとアイコン生成
+viewer/index.html               パネルの骨組みと諸元表示
+viewer/src/main.ts              kind を見てレイヤーを載せる汎用エンジン、UI、地図コントロール
+viewer/src/layers.ts            レイヤーレジストリ（ここに足す）と 3D地形の設定
+viewer/src/basemap.ts           背景地図（淡色ベクター／写真、ダークは明度反転で生成）
+viewer/src/pale-style.json      地理院 最適化ベクトルタイルの淡色スタイル
+viewer/src/theme.ts             ライト／ダークの判定と保存
+viewer/src/style.css            パネル・凡例・ポップアップ・地図コントロールの見た目
+viewer/public/data/             同梱データ
+viewer/public/icons/            ファビコン・アプリアイコン
 ```
 
-## 未対応（今後）
+## 未対応
 
-- **地形分類データ**（自然地形 / 人工地形） … `{z}/{x}/{y}.geojson`（native z16）で配信されており、
-  MapLibre がそのまま扱える形式ではないため、ベクトルタイル化（PMTiles 等）が必要
+- **地形分類データ**（自然地形 / 人工地形） … `{z}/{x}/{y}.geojson`（native z16）配信で
+  MapLibre がそのまま扱えない。ベクトルタイル化（PMTiles 等）が要る
 - **震源断層モデル**、電子基準点による地殻変動
 
 ## 出典・ライセンス
