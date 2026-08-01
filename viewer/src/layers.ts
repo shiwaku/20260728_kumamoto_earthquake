@@ -125,8 +125,8 @@ interface ChoroplethDef extends LayerBase {
   maxzoom?: number
   popup?: PopupSpec
   /**
-   * 立体表示（3D）の設定。指定すると fill ではなく fill-extrusion で描く。
-   * 2D のときは高さ 0 のままなので、見た目は塗りと変わらない。
+   * 立体表示の設定。指定すると fill ではなく fill-extrusion で描く。
+   * 2D/3D の切替は持たず常に立体なので、真上から見ているあいだは塗りと同じに見える。
    */
   extrude?: {
     /** 高さに使う属性。省略時は prop と同じ。 */
@@ -248,6 +248,9 @@ export type LayerDef = RasterDef | WmsDef | GeoJsonPolygonDef | GeoJsonPointDef 
  * z14 は北緯32.5度で約8m/px あり、元の標高データの分解能より細かい。
  *
  * URLの {x} と {y} の順序が地理院タイルと逆（{z}/{y}/{x}）。
+ *
+ * 復号の検証: 阿蘇 1419.7m / 熊本市中心部 10.7m / 有明海 0m / 八代の崩壊地 476.1m。
+ * 対象域1,258点を走査して -155.6〜1530.4m、スパイクなし。
  */
 export const TERRAIN: TerrainConfig = {
   key: 'gsj-terrain',
@@ -421,7 +424,7 @@ export const LAYERS: LayerDef[] = [
      * 等間隔に落として彩度を中間で最大にしたもの。
      *
      * 色相を紫〜マゼンタ帯にしているのは、他レイヤーと衝突しない唯一の帯だから。
-     * 推計震度が使う色相（およそ10/25/60/100/120/150/180/250）と活断層線の青（260）に
+     * 推計震度が使う色相（震度7から順に 30/10/65/105/125/150）と活断層線の青（258）に
      * 挟まれた空きが 290〜340 しかなく、その中央付近が310°。
      *
      * 以前は ColorBrewer の Purples をそのまま使っていたが、逐次パレットの検査で
@@ -451,7 +454,7 @@ export const LAYERS: LayerDef[] = [
       { min: 12, color: '#9948ca', label: '12〜34人' },
       { min: 35, color: '#6e3f8d', label: '35人以上' },
     ],
-    // 立体表示（右下の 2D/3D で切替）。1人あたり5mで、色に加えて高さでも量が読める。
+    // 常に立体。1人あたり5mで、地図を傾けると色に加えて高さでも量が読める。
     extrude: { metersPerUnit: 5 },
     attribution: ESTAT_ATTR,
     popup: {
