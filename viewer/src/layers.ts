@@ -334,6 +334,133 @@ const SUICHOKU_POPUP: PopupSpec = {
 }
 
 /**
+ * 垂直写真レイヤーの一覧。地区×撮影日ごとに1レイヤー。
+ *
+ * 同じ地区を日を変えて何度も飛んでいるため（熊本3地区は7/29・7/30・7/31・8/1の4回）、
+ * 撮影日ごとに別レイヤーとして持ち、日付の切り替えで同じ場所の変化を追えるようにしてある。
+ *
+ * 熊本1地区の7/29と8/3、熊本3地区の7/30・7/31・8/1は写真番号の集合が完全に一致するが、
+ * これは同じコースを飛び直して番号を振り直しているためで、中身は別物
+ * （画像URLが .../0730kumamoto3_MFC/... と .../0801kumamoto3_MFC/... で分かれている）。
+ *
+ * `（速報）` を付けるかは配信元のグループ分けに合わせている。レイヤーIDの `_sokuho` は
+ * 当てにならない（熊本1〜4地区は ID に `_sokuho` が付いていても正式版のグループに入っている）。
+ *
+ * 枚数・範囲・カメラ種別は z=2 の cocotile（全地物が1枚に入る）を実際に取得して数えた値。
+ * カメラ種別は画像URLのディレクトリ名（0729yatsushiro_UCE 等）から取っている。
+ */
+const SUICHOKU_SET: { key: string; id: string; name: string; z: number; desc: string }[] = [
+  {
+    key: 'suichoku',
+    id: '20260729kumamoto_yatsushiro_0729suichoku_sokuho',
+    name: '垂直写真（速報）八代地区 7/29撮影',
+    z: 50,
+    desc:
+      '撮影位置の点。513枚。速報用のため通常の航空カメラより画質が低く、雲で地上が見えにくい範囲もある。' +
+      '同じ7/29を撮り直した正式版が別レイヤーにある。',
+  },
+  {
+    key: 'suichoku-y',
+    id: '20260729kumamoto_yatsushiro_0729suichoku',
+    name: '垂直写真 八代地区 7/29撮影',
+    z: 51,
+    desc:
+      '八代市から氷川町・宇城市南部にかけての451枚。航空カメラ（UCE）による撮影で、速報版より画質が高い。',
+  },
+  {
+    key: 'suichoku-k1',
+    id: '20260729kumamoto_kumamoto1_0729suichoku_sokuho',
+    name: '垂直写真 熊本1地区 7/29撮影',
+    z: 52,
+    desc: '益城町から阿蘇方面にかけての127枚。航空カメラ（DMC）による撮影。',
+  },
+  {
+    key: 'suichoku-k1-0803',
+    id: '20260729kumamoto_kumamoto1_0803suichoku',
+    name: '垂直写真 熊本1地区 8/3撮影',
+    z: 53,
+    desc: '7/29と同じコースを飛び直した127枚。航空カメラ（DMC）。7/29と見比べると5日間の変化が分かる。',
+  },
+  {
+    key: 'suichoku-k2',
+    id: '20260729kumamoto_kumamoto2_0729suichoku_sokuho',
+    name: '垂直写真 熊本2地区 7/29撮影',
+    z: 54,
+    desc: '熊本市街から嘉島・御船方面の201枚。航空カメラ（UCF）による撮影。',
+  },
+  {
+    key: 'suichoku-k2-0802',
+    id: '20260729kumamoto_kumamoto2_0802suichoku_sokuho',
+    name: '垂直写真 熊本2地区 8/2撮影',
+    z: 55,
+    desc: '7/29と同じ範囲を飛び直した201枚。航空カメラ（UCF）。写真番号は7/29の続き（0202〜0402）。',
+  },
+  {
+    key: 'suichoku-k3-0729',
+    id: '20260729kumamoto_kumamoto3_0729suichoku_sokuho',
+    name: '垂直写真 熊本3地区 7/29撮影',
+    z: 56,
+    desc:
+      '宇城市から山都町へ延びる帯の東側だけの114枚。航空カメラ（MFC）。' +
+      '7/30以降の撮影は西へ広がって558枚になる。',
+  },
+  {
+    key: 'suichoku-k3-0730',
+    id: '20260729kumamoto_kumamoto3_0730suichoku_sokuho',
+    name: '垂直写真 熊本3地区 7/30撮影',
+    z: 57,
+    desc: '宇城市三角町から美里町・山都町にかけての558枚。航空カメラ（MFC）。',
+  },
+  {
+    key: 'suichoku-k3-0731',
+    id: '20260729kumamoto_kumamoto3_0731suichoku_sokuho',
+    name: '垂直写真 熊本3地区 7/31撮影',
+    z: 58,
+    desc: '7/30と同じコースを飛び直した558枚。航空カメラ（MFC）。正射画像（熊本3地区）の元写真の一部。',
+  },
+  {
+    key: 'suichoku-k3-0801',
+    id: '20260729kumamoto_kumamoto3_0801suichoku',
+    name: '垂直写真 熊本3地区 8/1撮影',
+    z: 59,
+    desc: '7/30・7/31と同じコースの558枚。航空カメラ（MFC）。正射画像（熊本3地区）の元写真の一部。',
+  },
+  {
+    key: 'suichoku-k4-0730',
+    id: '20260729kumamoto_kumamoto4_0730suichoku_sokuho',
+    name: '垂直写真 熊本4地区 7/30撮影',
+    z: 60,
+    desc:
+      '宇城市・氷川町など最大震度7を観測した一帯の202枚。航空カメラ（UCF）。' +
+      '同じ範囲を7/29に斜め写真で撮ったものが別レイヤーにある。',
+  },
+]
+
+/**
+ * 垂直写真レイヤーを組み立てる。アイコン・ポップアップ・出典はどの地区も同じで、
+ * 違うのは配信元のレイヤーIDと説明文だけなので、SUICHOKU_SET から機械的に作る。
+ *
+ * URL の `2/3/1` は cocotile 方式の最小ズームのタイル。この1枚に全地物が入っている
+ * （z=2 のタイル (3,1) は東経90〜180度・北緯0〜66.5度なので日本全域を覆う）。
+ */
+const SUICHOKU_LAYERS: GeoJsonPointDef[] = SUICHOKU_SET.map((s) => ({
+  kind: 'geojson',
+  render: 'point',
+  key: s.key,
+  name: s.name,
+  group: '空中写真',
+  on: false,
+  opacity: 1,
+  z: s.z,
+  data: `https://maps.gsi.go.jp/xyz/${s.id}/2/3/1.geojson`,
+  icons: SUICHOKU_ICONS,
+  iconFallback: 'suichoku-081',
+  attribution: GSI_ATTR,
+  popup: SUICHOKU_POPUP,
+  desc: `${s.desc}クリックで写真が開く。`,
+}))
+
+/**
  * 収録レイヤー。パネルはこの配列順（グループ単位でまとめて）表示する。
  * 地図の重なり順は z（大きいほど前面）で決まる。
  */
@@ -486,6 +613,24 @@ export const LAYERS: LayerDef[] = [
   {
     kind: 'geojson',
     render: 'polygon',
+    key: 'syamen-k3',
+    name: '斜面崩壊・堆積分布 熊本3地区',
+    group: '被害状況',
+    on: false,
+    opacity: 1,
+    z: 41,
+    data: 'https://maps.gsi.go.jp/xyz/20260729kumamoto_syamenhoukai_taiseki_kumamoto3/2/3/1.geojson',
+    // 八代地区とは凡例が別。熊本3地区の判読には土石流の区分が無い。
+    legendImage: 'https://maps.gsi.go.jp/legend/20260729kumamoto_syamenhoukai_taiseki_legend.png',
+    attribution: GSI_ATTR,
+    desc:
+      '7月31日・8月1日撮影の正射画像を8月4日に判読して作成（長さまたは幅がおおむね30m以上）。' +
+      '八代地区と違い土石流の区分は無い。現地調査は行われていないため、崩壊箇所が抜けていたり、' +
+      '本地震によらない箇所を含むことがある。',
+  },
+  {
+    kind: 'geojson',
+    render: 'polygon',
     key: 'road-restriction',
     name: '道路規制（7/31 7:30時点）',
     group: '被害状況',
@@ -516,41 +661,48 @@ export const LAYERS: LayerDef[] = [
   {
     kind: 'raster',
     key: 'ortho',
-    name: '正射画像（速報）八代地区 7/29撮影',
+    name: '正射画像 八代地区 7/29撮影',
     group: '空中写真',
     on: false,
     opacity: 1,
     z: 20,
-    tiles: ['https://maps.gsi.go.jp/xyz/20260729kumamoto_yatsushiro_0729do_sokuho/{z}/{x}/{y}.png'],
+    // 速報版（20260729kumamoto_yatsushiro_0729do_sokuho）から正式版へ差し替えた。
+    // 同じ7/29の撮影だが、速報版は速報用カメラの画像を突き合わせた暫定成果で、
+    // 正式版は航空カメラ（UCE）の写真から作り直したもの。速報版も配信は続いている。
+    tiles: ['https://maps.gsi.go.jp/xyz/20260729kumamoto_yatsushiro_0729do/{z}/{x}/{y}.png'],
     minzoom: 10,
     maxzoom: 18,
     tileSize: 256,
-    // 判読範囲ポリゴン（斜面崩壊分布データに含まれる #3388ff の地物）の実測 bbox。
-    // 撮影範囲とほぼ一致するので、これを外れたタイルは取りに行かない。
-    bounds: [130.4310, 32.2444, 130.7714, 32.5895],
+    // z13 のタイル到達確認（224枚を走査して48枚が200）から求めた実測 bbox。
+    // 速報版より南に広く、北はやや狭い。
+    bounds: [130.4297, 32.2128, 130.7812, 32.6209],
     attribution: GSI_ATTR,
     desc:
       '空中写真から自動処理で作成した正射画像。構造物等に歪み・ズレ・不連続が生じて見えることがあり、' +
-      '雲で地表が見えにくい範囲もある。',
+      '雲で地表が見えにくい範囲もある。斜面崩壊・堆積分布（八代地区）はこの画像を判読して作られている。',
   },
   {
-    kind: 'geojson',
-    render: 'point',
-    key: 'suichoku',
-    name: '垂直写真（速報）八代地区 7/29撮影',
+    kind: 'raster',
+    key: 'ortho-k3',
+    name: '正射画像 熊本3地区 7/31・8/1撮影',
     group: '空中写真',
     on: false,
     opacity: 1,
-    z: 50,
-    data: 'https://maps.gsi.go.jp/xyz/20260729kumamoto_yatsushiro_0729suichoku_sokuho/2/3/1.geojson',
-    icons: SUICHOKU_ICONS,
-    iconFallback: 'suichoku-081',
+    z: 21,
+    tiles: ['https://maps.gsi.go.jp/xyz/20260729kumamoto_kumamoto3_0731_0801do/{z}/{x}/{y}.png'],
+    minzoom: 10,
+    maxzoom: 18,
+    tileSize: 256,
+    // z13 のタイル到達確認（120枚を走査して28枚が200）から求めた実測 bbox。
+    // 八代地区の北隣、宇城市から山都町へ延びる東西の帯。
+    bounds: [130.4736, 32.6209, 130.9131, 32.7318],
     attribution: GSI_ATTR,
-    popup: SUICHOKU_POPUP,
     desc:
-      '撮影位置の点。クリックで写真が開く。' +
-      '速報用のため通常の航空カメラより画質が低く、雲で地上が見えにくい範囲もある。',
+      '2日にわたる撮影を1枚に合成した正射画像。構造物等に歪み・ズレ・不連続が生じて見えることがあり、' +
+      '雲で地表が見えにくい範囲もある。斜面崩壊・堆積分布（熊本3地区）はこの画像を判読して作られている。',
   },
+  // 垂直写真は地区×撮影日で11レイヤーある。定義は SUICHOKU_SET を見る。
+  ...SUICHOKU_LAYERS,
   {
     kind: 'geojson',
     render: 'point',
@@ -559,7 +711,7 @@ export const LAYERS: LayerDef[] = [
     group: '空中写真',
     on: false,
     opacity: 1,
-    z: 60,
+    z: 70,
     data: 'https://maps.gsi.go.jp/xyz/20260729kumamoto_yatsushiro_0729naname/2/3/1.geojson',
     icons: NANAME_ICONS,
     iconFallback: 'naname-185',
@@ -571,46 +723,12 @@ export const LAYERS: LayerDef[] = [
   {
     kind: 'geojson',
     render: 'point',
-    key: 'suichoku-k1',
-    name: '垂直写真 熊本1地区 7/29撮影',
-    group: '空中写真',
-    on: false,
-    opacity: 1,
-    z: 51,
-    data: 'https://maps.gsi.go.jp/xyz/20260729kumamoto_kumamoto1_0729suichoku_sokuho/2/3/1.geojson',
-    icons: SUICHOKU_ICONS,
-    iconFallback: 'suichoku-081',
-    attribution: GSI_ATTR,
-    popup: SUICHOKU_POPUP,
-    desc:
-      '益城町から阿蘇方面にかけての127枚。クリックで写真が開く。' +
-      '八代地区の速報用写真と違い航空カメラ（DMC）による撮影。',
-  },
-  {
-    kind: 'geojson',
-    render: 'point',
-    key: 'suichoku-k2',
-    name: '垂直写真 熊本2地区 7/29撮影',
-    group: '空中写真',
-    on: false,
-    opacity: 1,
-    z: 52,
-    data: 'https://maps.gsi.go.jp/xyz/20260729kumamoto_kumamoto2_0729suichoku_sokuho/2/3/1.geojson',
-    icons: SUICHOKU_ICONS,
-    iconFallback: 'suichoku-081',
-    attribution: GSI_ATTR,
-    popup: SUICHOKU_POPUP,
-    desc: '熊本市街から嘉島・御船方面の201枚。クリックで写真が開く。航空カメラ（UCF）による撮影。',
-  },
-  {
-    kind: 'geojson',
-    render: 'point',
     key: 'naname-k4',
     name: '斜め写真 熊本4地区 7/29撮影',
     group: '空中写真',
     on: false,
     opacity: 1,
-    z: 61,
+    z: 71,
     data: 'https://maps.gsi.go.jp/xyz/20260729kumamoto_kumamoto4_0729naname/2/3/1.geojson',
     icons: NANAME_ICONS,
     iconFallback: 'naname-185',
@@ -622,6 +740,107 @@ export const LAYERS: LayerDef[] = [
   },
 
   // ===== 地殻変動（SAR干渉解析） =====
+  //
+  // 干渉画像は3種類ある。読みやすい順に、
+  //   2.5次元解析  … 上下・東西の成分に分解済み。色がそのまま変動量（cm）を表す
+  //   アンラップ   … 縞を積算して視線方向の絶対量にしたもの。色がそのまま変動量（cm）
+  //   干渉画像     … 生の縞模様。縞を数えて量を読む
+  // の順。まず 2.5次元解析を見て、細部を干渉画像で確かめるのが早い。
+  //
+  // タイル定義は http:// で配信されているが、https でも同じタイルが取れて
+  // Access-Control-Allow-Origin: * が付くことを実測で確認しているため https で参照する。
+  // どれも maxNativeZoom=15（z16 は 404）。これ以上は拡大表示になる。
+  {
+    kind: 'raster',
+    key: 'sar-qu',
+    name: 'SAR 2.5次元解析 準上下成分',
+    group: '地殻変動',
+    on: false,
+    opacity: 0.8,
+    z: 28,
+    tiles: [
+      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_p124_20250812_20260728_p131_20260702_20260730_qu/{z}/{x}/{y}.png',
+    ],
+    minzoom: 5,
+    maxzoom: 15,
+    tileSize: 256,
+    // z11 のタイル到達確認（195枚を走査して31枚が200）から求めた実測 bbox。
+    // だいち2号と4号の重なる範囲でしか解けないため、単独の干渉画像より狭い。
+    bounds: [130.0781, 31.8029, 131.1328, 32.9902],
+    legendImage: 'https://maps.gsi.go.jp/sar/cyberjapan/qu_grd_bcyr2_-80_80cm.png',
+    attribution: SAR_ATTR,
+    desc:
+      'だいち2号（東側から）と4号（西側から）の解析を組み合わせて、上下方向の成分だけを取り出したもの。' +
+      '縞を数える必要がなく、色がそのまま変動量（±80cm）を表す。' +
+      '日奈久断層帯の北西部で最大約50cmの沈降。' +
+      '厳密な鉛直ではなく鉛直から少し傾いた向き（準上下＝93°）の成分。',
+  },
+  {
+    kind: 'raster',
+    key: 'sar-qe',
+    name: 'SAR 2.5次元解析 準東西成分',
+    group: '地殻変動',
+    on: false,
+    opacity: 0.8,
+    z: 27,
+    tiles: [
+      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_p124_20250812_20260728_p131_20260702_20260730_qe/{z}/{x}/{y}.png',
+    ],
+    minzoom: 5,
+    maxzoom: 15,
+    tileSize: 256,
+    bounds: [130.0781, 31.8029, 131.1328, 32.9902],
+    legendImage: 'https://maps.gsi.go.jp/sar/cyberjapan/qe_grd_bcyr2_-80_80cm.png',
+    attribution: SAR_ATTR,
+    desc:
+      '準上下成分と同じ組み合わせから、東西方向の成分だけを取り出したもの。' +
+      '色がそのまま変動量（±80cm）を表す。日奈久断層帯の北西部で最大約1mの東向きの変動。' +
+      '準東西＝13°で、南北方向の動きはこの解析では分からない。',
+  },
+  {
+    kind: 'raster',
+    key: 'sar-un-ar',
+    name: 'SAR アンラップ画像 だいち4号 7/2〜7/30',
+    group: '地殻変動',
+    on: false,
+    opacity: 0.8,
+    z: 26,
+    tiles: [
+      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20260702_20260730_u11l_p131f630_640_l12_obd_un/{z}/{x}/{y}.png',
+    ],
+    minzoom: 5,
+    maxzoom: 15,
+    tileSize: 256,
+    bounds: [129.7266, 31.8029, 131.1328, 33.1376],
+    legendImage: 'https://maps.gsi.go.jp/sar/cyberjapan/bcyr2_-100_100cm(AR).png',
+    attribution: SAR_ATTR,
+    desc:
+      '干渉画像の縞を積算して、視線方向の変動量（±100cm）を絶対値にしたもの。縞を数えなくて済む。' +
+      '衛星は西側上空にあり、遠ざかる変動は東向きの動きまたは沈降。' +
+      '北西部で最大約1m遠ざかり、南東部で最大約10cm近づいている。',
+  },
+  {
+    kind: 'raster',
+    key: 'sar-un-al',
+    name: 'SAR アンラップ画像 だいち2号 2025/8/12〜7/28',
+    group: '地殻変動',
+    on: false,
+    opacity: 0.8,
+    z: 25,
+    tiles: [
+      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20250812_20260728_u11l_p124f680_l12_obd_un/{z}/{x}/{y}.png',
+    ],
+    minzoom: 5,
+    maxzoom: 15,
+    tileSize: 256,
+    bounds: [130.0781, 31.8029, 131.1328, 32.9902],
+    legendImage: 'https://maps.gsi.go.jp/sar/cyberjapan/bcyr2_-100_100cm(AL).png',
+    attribution: SAR_ATTR,
+    desc:
+      '視線方向の変動量（±100cm）。衛星は東側上空にあり、近づく変動は東向きの動きまたは隆起。' +
+      '北西部で最大約50cm、南東部で最大約10cm近づいている。' +
+      '取得間隔が350日と長いため、地震以外の季節変化や植生の影響も含まれる。',
+  },
   {
     kind: 'raster',
     key: 'sar-alos4-ar',
@@ -630,13 +849,14 @@ export const LAYERS: LayerDef[] = [
     on: false,
     opacity: 0.8,
     z: 24,
-    // 定義は http:// で配信されているが、https でも同じタイルが取れて
-    // Access-Control-Allow-Origin: * が付くことを実測で確認しているため https で参照する。
+    // 精密暦・大気／電離層補正を入れて作り直された版（末尾 _precise）に差し替えた。
+    // 差し替え前に参照していた ..._20260702_20260730_u11l_p124f630_640_l12_obd は
+    // まだ配信されているが、配信元のレイヤー一覧からは外れている。
+    // ID の日付（0701/0729）は観測日のUTC表記で、JST では 7/2〜7/30 のペア。
     tiles: [
-      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20260702_20260730_u11l_p124f630_640_l12_obd/{z}/{x}/{y}.png',
+      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20260701_20260729_u89r_p131_precise/{z}/{x}/{y}.png',
     ],
     minzoom: 5,
-    // maxNativeZoom=15。これ以上は拡大表示になる。
     maxzoom: 15,
     tileSize: 256,
     // 解析範囲は南北に長い1条のストリップ。z11 のタイル到達確認から求めた実測 bbox。
@@ -647,7 +867,7 @@ export const LAYERS: LayerDef[] = [
       '色1周期が視線方向（衛星と地表の距離）の約12cmの変化にあたり、縞の数だけ地殻変動が生じたことを示す。' +
       '衛星は西側上空にあり、遠ざかる変動は東向きの動きまたは沈降。' +
       '日奈久断層帯の北西側で最大約1m遠ざかり、南東側で最大約10cm近づいている。' +
-      '樹木・水域など縞が読めない範囲がある。',
+      '樹木・水域など縞が読めない範囲がある。量を読むだけならアンラップ画像のほうが早い。',
   },
   {
     kind: 'raster',
@@ -657,13 +877,15 @@ export const LAYERS: LayerDef[] = [
     on: false,
     opacity: 0.8,
     z: 22,
+    // 上と同じく _precise 版へ差し替え。
     tiles: [
-      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20250812_20260728_u11l_p124f680_l10_obd_mask_offset/{z}/{x}/{y}.png',
+      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20250812-20260728_u11l_p124f680-690_precise/{z}/{x}/{y}.png',
     ],
     minzoom: 5,
     maxzoom: 15,
     tileSize: 256,
-    bounds: [130.0781, 31.8029, 131.1328, 32.9902],
+    // 差し替え前より北へ広い（f680 だけでなく f690 まで繋いだ範囲）。
+    bounds: [129.9023, 31.8029, 131.1328, 33.4314],
     legendImage: 'https://maps.gsi.go.jp/sar/cyberjapan/colorbarAL.png',
     attribution: SAR_ATTR,
     desc:
