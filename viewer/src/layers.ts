@@ -39,6 +39,10 @@ const MLIT_ATTR =
 const SAR_ATTR =
   '<a href="https://www.gsi.go.jp/uchusokuchi/20260728kumamoto.html" target="_blank" rel="noopener">国土地理院（解析）</a>' +
   '／<a href="https://www.eorc.jaxa.jp/ALOS/" target="_blank" rel="noopener">JAXA（原初データ所有）</a>'
+/** 変位境界は SAR と同じ解析／原初データだが、公表ページが別。 */
+const HENNI_ATTR =
+  '<a href="https://www.gsi.go.jp/uchusokuchi/uchusokuchi41008.html" target="_blank" rel="noopener">国土地理院（判読）</a>' +
+  '／<a href="https://www.eorc.jaxa.jp/ALOS/" target="_blank" rel="noopener">JAXA（原初データ所有）</a>'
 
 /** 震央（気象庁 暫定値）: 2026/07/28 16:27 熊本県熊本地方 深さ16km M7.1 */
 export const EPICENTER: [number, number] = [130.65, 32.61]
@@ -665,7 +669,7 @@ export const LAYERS: LayerDef[] = [
     group: '空中写真',
     on: false,
     opacity: 1,
-    z: 20,
+    z: 18,
     // 速報版（20260729kumamoto_yatsushiro_0729do_sokuho）から正式版へ差し替えた。
     // 同じ7/29の撮影だが、速報版は速報用カメラの画像を突き合わせた暫定成果で、
     // 正式版は航空カメラ（UCE）の写真から作り直したもの。速報版も配信は続いている。
@@ -688,7 +692,7 @@ export const LAYERS: LayerDef[] = [
     group: '空中写真',
     on: false,
     opacity: 1,
-    z: 21,
+    z: 19,
     tiles: ['https://maps.gsi.go.jp/xyz/20260729kumamoto_kumamoto3_0731_0801do/{z}/{x}/{y}.png'],
     minzoom: 10,
     maxzoom: 18,
@@ -700,6 +704,29 @@ export const LAYERS: LayerDef[] = [
     desc:
       '2日にわたる撮影を1枚に合成した正射画像。構造物等に歪み・ズレ・不連続が生じて見えることがあり、' +
       '雲で地表が見えにくい範囲もある。斜面崩壊・堆積分布（熊本3地区）はこの画像を判読して作られている。',
+  },
+  {
+    kind: 'raster',
+    key: 'ortho-k1',
+    name: '正射画像 熊本1地区 8/3撮影',
+    group: '空中写真',
+    on: false,
+    opacity: 1,
+    z: 20,
+    // 配信元のレイヤー一覧（layers_20260729kumamoto.txt）には載っているが、
+    // 防災ページの「正射画像」の節にはまだ出ていない（8/6時点）。タイルは配信済み。
+    tiles: ['https://maps.gsi.go.jp/xyz/20260729kumamoto_kumamoto1_0803do/{z}/{x}/{y}.png'],
+    minzoom: 10,
+    maxzoom: 18,
+    tileSize: 256,
+    // z13 のタイル到達確認（357枚を走査して28枚が200）から求めた実測 bbox。
+    // 熊本市北部から合志市・大津町・菊陽町・西原村・益城町にかけての東西の帯。
+    bounds: [130.5615, 32.7688, 130.957, 32.9165],
+    attribution: GSI_ATTR,
+    desc:
+      '地震から6日後の撮影で、収録している正射画像のうち最も新しい。' +
+      '空中写真から自動処理で作成しているため構造物等に歪み・ズレ・不連続が生じて見えることがあり、' +
+      '雲で地表が見えにくい範囲もある。同じ範囲の7/29の状況は垂直写真（熊本1地区 7/29撮影）で見る。',
   },
   // 垂直写真は地区×撮影日で11レイヤーある。定義は SUICHOKU_SET を見る。
   ...SUICHOKU_LAYERS,
@@ -741,15 +768,45 @@ export const LAYERS: LayerDef[] = [
 
   // ===== 地殻変動（SAR干渉解析） =====
   //
-  // 干渉画像は3種類ある。読みやすい順に、
+  // 読みやすい順に、
+  //   変位境界     … 干渉画像から判読済みの線。どこが切れているかだけを見るならこれ
   //   2.5次元解析  … 上下・東西の成分に分解済み。色がそのまま変動量（cm）を表す
   //   アンラップ   … 縞を積算して視線方向の絶対量にしたもの。色がそのまま変動量（cm）
   //   干渉画像     … 生の縞模様。縞を数えて量を読む
   // の順。まず 2.5次元解析を見て、細部を干渉画像で確かめるのが早い。
   //
+  // 干渉画像は6枚ある。同じ地殻変動でも、衛星の進行方向（北行=A／南行=D）と
+  // 電波の照射方向（右=R／左=L）が違うと縞の出方が変わるため、
+  // 配信元の凡例（colorbarAR / AL / DR / DL）も組み合わせごとに別になっている。
+  // 右（R）で照射すると衛星は対象の西側、左（L）だと東側の上空にいる、と読む
+  // （北行＝北へ進むので進行方向の右が東、南行はその逆）。
+  //
   // タイル定義は http:// で配信されているが、https でも同じタイルが取れて
   // Access-Control-Allow-Origin: * が付くことを実測で確認しているため https で参照する。
   // どれも maxNativeZoom=15（z16 は 404）。これ以上は拡大表示になる。
+  {
+    kind: 'geojson',
+    render: 'polygon',
+    key: 'henni',
+    name: '変位境界（SAR判読 8/5暫定）',
+    group: '地殻変動',
+    on: false,
+    opacity: 1,
+    // 干渉画像の上に重ねて読む線なので、活断層図・主要活断層帯より前面に置く。
+    z: 36,
+    // 配信元は www.gsi.go.jp の ZIP で CORS を返さないため同梱している。
+    // 座標が空の26地物を落とし、線色を付けたもの。生成は tools/build_displacement_boundary.py。
+    data: `${import.meta.env.BASE_URL}data/gsi/displacement_boundary.geojson`,
+    legend: [{ label: '判読された変位境界（25本）', color: '#ff2ec4', shape: 'line' }],
+    attribution: HENNI_ATTR,
+    popup: { rows: ['判読ID'] },
+    desc:
+      'だいち2号・4号の干渉SAR解析とピクセルオフセット解析から、地表の変位が不連続になる境界を判読した線。' +
+      '御船町大字高木付近から八代市平山新町付近まで約35kmにわたって確認された、' +
+      '断層運動に伴って現れたとみられる境界。' +
+      '位置は数10〜100m程度の誤差を含み得るため、配信元は縮尺の目安をズームレベル15以下としている。' +
+      '色は公表図の黒からマゼンタへ変えてある（ダークテーマや空中写真の上でも沈まないようにするため）。',
+  },
   {
     kind: 'raster',
     key: 'sar-qu',
@@ -757,7 +814,7 @@ export const LAYERS: LayerDef[] = [
     group: '地殻変動',
     on: false,
     opacity: 0.8,
-    z: 28,
+    z: 30,
     tiles: [
       'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_p124_20250812_20260728_p131_20260702_20260730_qu/{z}/{x}/{y}.png',
     ],
@@ -782,7 +839,7 @@ export const LAYERS: LayerDef[] = [
     group: '地殻変動',
     on: false,
     opacity: 0.8,
-    z: 27,
+    z: 29,
     tiles: [
       'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_p124_20250812_20260728_p131_20260702_20260730_qe/{z}/{x}/{y}.png',
     ],
@@ -804,7 +861,7 @@ export const LAYERS: LayerDef[] = [
     group: '地殻変動',
     on: false,
     opacity: 0.8,
-    z: 26,
+    z: 28,
     tiles: [
       'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20260702_20260730_u11l_p131f630_640_l12_obd_un/{z}/{x}/{y}.png',
     ],
@@ -826,7 +883,7 @@ export const LAYERS: LayerDef[] = [
     group: '地殻変動',
     on: false,
     opacity: 0.8,
-    z: 25,
+    z: 27,
     tiles: [
       'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20250812_20260728_u11l_p124f680_l12_obd_un/{z}/{x}/{y}.png',
     ],
@@ -848,7 +905,7 @@ export const LAYERS: LayerDef[] = [
     group: '地殻変動',
     on: false,
     opacity: 0.8,
-    z: 24,
+    z: 26,
     // 精密暦・大気／電離層補正を入れて作り直された版（末尾 _precise）に差し替えた。
     // 差し替え前に参照していた ..._20260702_20260730_u11l_p124f630_640_l12_obd は
     // まだ配信されているが、配信元のレイヤー一覧からは外れている。
@@ -876,7 +933,7 @@ export const LAYERS: LayerDef[] = [
     group: '地殻変動',
     on: false,
     opacity: 0.8,
-    z: 22,
+    z: 25,
     // 上と同じく _precise 版へ差し替え。
     tiles: [
       'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20250812-20260728_u11l_p124f680-690_precise/{z}/{x}/{y}.png',
@@ -893,6 +950,99 @@ export const LAYERS: LayerDef[] = [
       '日奈久断層帯の北西側で最大約50cm、南東側で最大約10cm近づいている。' +
       '取得間隔が350日と長いため、地震以外の季節変化や植生の影響も含まれる。',
   },
+  // 以下4枚は8月5日に追加公表された干渉画像（配信元の図2・図4・図6・図3）。
+  // だいち2号と4号をまたぐペアが3組あり、これまでの2枚と違って
+  // 「だいち◯号の画像」とは言えないので、名前は 1回目→2回目 の衛星で書いている。
+  {
+    kind: 'raster',
+    key: 'sar-0711-0731',
+    name: 'SAR干渉画像 だいち4号→2号 7/11〜7/31',
+    group: '地殻変動',
+    on: false,
+    opacity: 0.8,
+    z: 24,
+    // ID の日付（0710/0730）は観測日のUTC表記で、JST では 7/11〜7/31 のペア。
+    tiles: [
+      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20260710_20260730_u06r_p130_precise/{z}/{x}/{y}.png',
+    ],
+    minzoom: 5,
+    maxzoom: 15,
+    tileSize: 256,
+    // z11 のタイル到達確認（221枚を走査して39枚が200）から求めた実測 bbox。以下3枚も同じ方法。
+    bounds: [130.2539, 32.1012, 131.3086, 33.4314],
+    legendImage: 'https://maps.gsi.go.jp/sar/cyberjapan/colorbarAR.png',
+    attribution: SAR_ATTR,
+    desc:
+      '北行・右（東）照射で、衛星は西側上空。遠ざかる変動は東向きの動きまたは沈降。' +
+      '色1周期が視線方向の約12cmの変化にあたり、日奈久断層帯の北西側で最大約1m遠ざかっている。' +
+      '間隔が20日と収録中で最も短く、地震前後の変動だけを見るのに向く。入射角32.3度。',
+  },
+  {
+    kind: 'raster',
+    key: 'sar-0515-0801',
+    name: 'SAR干渉画像 だいち2号→4号 5/15〜8/1',
+    group: '地殻変動',
+    on: false,
+    opacity: 0.8,
+    z: 23,
+    tiles: [
+      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20260515_20260801_u06l_p028_precise/{z}/{x}/{y}.png',
+    ],
+    minzoom: 5,
+    maxzoom: 15,
+    tileSize: 256,
+    bounds: [130.0781, 31.6534, 131.3086, 33.4314],
+    legendImage: 'https://maps.gsi.go.jp/sar/cyberjapan/colorbarDL.png',
+    attribution: SAR_ATTR,
+    desc:
+      '南行・左（東）照射で、衛星は西側上空。遠ざかる変動は東向きの動きまたは沈降。' +
+      '日奈久断層帯の北西側で最大約1m遠ざかっている。' +
+      '収録中で唯一2回目の観測が8月に入っており、南北にも最も広い。入射角32.5度。',
+  },
+  {
+    kind: 'raster',
+    key: 'sar-1113-0729',
+    name: 'SAR干渉画像 だいち4号→2号 2025/11/13〜7/29',
+    group: '地殻変動',
+    on: false,
+    opacity: 0.8,
+    z: 22,
+    tiles: [
+      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20251113_20260729_u09l_p029_precise/{z}/{x}/{y}.png',
+    ],
+    minzoom: 5,
+    maxzoom: 15,
+    tileSize: 256,
+    bounds: [130.0781, 31.8029, 131.1328, 33.578],
+    legendImage: 'https://maps.gsi.go.jp/sar/cyberjapan/colorbarDL.png',
+    attribution: SAR_ATTR,
+    desc:
+      '南行・左（東）照射で、衛星は西側上空。遠ざかる変動は東向きの動きまたは沈降。' +
+      '日奈久断層帯の北西側で最大約1m遠ざかっている。' +
+      '取得間隔が約8か月半あるため、地震以外の季節変化や植生の影響も含まれる。入射角42.7度。',
+  },
+  {
+    kind: 'raster',
+    key: 'sar-1220-0731',
+    name: 'SAR干渉画像 だいち2号 2024/12/20〜7/31',
+    group: '地殻変動',
+    on: false,
+    opacity: 0.8,
+    z: 21,
+    tiles: [
+      'https://insarmap.gsi.go.jp/xyz/urgent_earthquake_20260728R8kumamoto_20241220_20260731_u14r_p021_precise/{z}/{x}/{y}.png',
+    ],
+    minzoom: 5,
+    maxzoom: 15,
+    tileSize: 256,
+    bounds: [130.2539, 32.1012, 131.1328, 33.1376],
+    legendImage: 'https://maps.gsi.go.jp/sar/cyberjapan/colorbarDR.png',
+    attribution: SAR_ATTR,
+    desc:
+      '南行・右（西）照射で、衛星は東側上空。遠ざかる変動は西向きの動きまたは沈降。' +
+      '南東側で最大約20cm遠ざかっている。' +
+      '取得間隔が約19か月と収録中で最も長く、地震以外の変化を多く含む。入射角54.9度で最も浅い角度から見ている。',
+  },
 
   // ===== 地形・活断層 =====
   {
@@ -903,7 +1053,7 @@ export const LAYERS: LayerDef[] = [
     group: '地形・活断層',
     on: true,
     opacity: 1,
-    z: 32,
+    z: 34,
     // 配信元 https://maps.gsi.go.jp/xyz/active_fault/2/3/1.geojson は CORS を返すので
     // 直接参照もできるが、整形済み2.36MBで gzip も返らないため圧縮して同梱している。
     // 生成は tools/build_active_fault.py。
@@ -925,7 +1075,7 @@ export const LAYERS: LayerDef[] = [
     group: '地形・活断層',
     on: false,
     opacity: 0.85,
-    z: 30,
+    z: 33,
     tiles: ['https://maps.gsi.go.jp/xyz/afm/{z}/{x}/{y}.png'],
     maxzoom: 16,
     tileSize: 256,
@@ -1206,9 +1356,11 @@ export function popupHtml(def: LayerDef, props: Record<string, unknown>): string
     })
     .join('')
 
+  // タイトルに使える属性が無いレイヤーはレイヤー名がタイトルになるので、
+  // 同じ文字列を pp-sub にもう一度出さない。
   return (
     `<div class="pp-title">${esc(title || def.name)}</div>` +
-    `<div class="pp-sub">${esc(def.name)}</div>` +
+    (title ? `<div class="pp-sub">${esc(def.name)}</div>` : '') +
     (rows ? `<dl class="pp-dl">${rows}</dl>` : '')
   )
 }
