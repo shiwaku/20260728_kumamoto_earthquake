@@ -110,6 +110,36 @@ Vite の `base` は `'./'` なのでプロジェクトページ（`/<repo>/` 配
 `data` に直接指定する。地物が持つ Leaflet 用のスタイル属性（`_fillColor` / `_color` / `_fillOpacity` /
 `_weight`）は配色を決め直さずそのまま使う。
 
+## 配信元の更新監視
+
+国土地理院の[令和8年熊本地震ページ](https://www.gsi.go.jp/BOUSAI/20260728_kumamoto_earthquake.html)は
+更新のたびに節が書き換わり、新しいタイルが静かに増える。`Last-Modified` を返さないので、
+内容を構造化して取り込み、前回と比べて検知する。
+
+```sh
+python3 tools/watch_gsi.py            # 巡回して差分だけ表示（スナップショットは触らない）
+python3 tools/watch_gsi.py --update   # 差分を表示し watch/gsi_snapshot.json を書き換える
+python3 tools/watch_gsi.py --audit    # 配信中なのに layers.ts に無いタイルを棚卸し
+```
+
+`.github/workflows/watch-gsi.yml` が1日4回（JST 6:15 / 12:15 / 18:15 / 0:15）これを回し、
+差分が出たらスナップショットを `main` にコミットして `gsi-update` ラベルの Issue を立てる。
+レイヤー追加そのものは Issue を見て人が行う（説明文・重なり順・ポップアップの設計は機械化できない）。
+
+見ているもの:
+
+| 対象 | 何が分かるか |
+| --- | --- |
+| 提供情報一覧の括弧（`９．斜面崩壊・堆積分布データ（７月３０日公表、８月６日更新）`） | 節ごとの公表・更新日。最も素直な更新シグナル |
+| `maps.gsi.go.jp` URL の `ls=std%7C<ID>` / `lcd=<ID>` | 新しいタイルID。`layers.ts` に無ければ「ビューワ未収録」と印を付ける |
+| zip / geojson / pdf などへのリンク | 配信ファイルの追加・消滅 |
+| 本文テキスト（節ごとに行単位で保存） | スナップショットの `git diff` が「どの一文が増えたか」になる |
+| 本文中の gsi.go.jp の `.html` リンク | 干渉解析・変位境界などの下位ページ9件を自動で辿る。増えても巡回リストの手入れが要らない |
+
+`www.gsi.go.jp` は TLS の unsafe legacy renegotiation を要求するので、curl では
+`error:0A000152` で繋がらない。`OP_LEGACY_SERVER_CONNECT` を立てて取っている
+（`tools/build_displacement_boundary.py` と同じ）。
+
 ## 同梱データ
 
 直接参照できない・しないほうがよい5つだけを `viewer/public/data/` に置いている。
@@ -176,8 +206,11 @@ Vite の `base` は `'./'` なのでプロジェクトページ（`/<repo>/` 配
 
 ```
 .github/workflows/deploy.yml    GitHub Pages へのデプロイ
+.github/workflows/watch-gsi.yml 配信元ページの定期巡回（差分があれば Issue を立てる）
 raw/                            取得した原本（J-RISQ の KML、主要活断層帯の GeoJSON、変位境界の ZIP）
 tools/                          同梱データの生成スクリプトとアイコン生成
+tools/watch_gsi.py              配信元ページの巡回と差分検知
+watch/gsi_snapshot.json         前回巡回時の配信元の状態（差分の基準）
 viewer/index.html               パネルの骨組みと諸元表示
 viewer/src/main.ts              kind を見てレイヤーを載せる汎用エンジン、UI、地図コントロール
 viewer/src/layers.ts            レイヤーレジストリ（ここに足す）と 3D地形の設定
