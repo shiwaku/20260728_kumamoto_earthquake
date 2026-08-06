@@ -4,8 +4,8 @@ name: Watch GSI page
 #
 # なぜ cron なのか
 #   配信元は Last-Modified を返さないので、内容を取り込んで前回と比べる以外に更新を知る術がない。
-#   1日4回（JST 6:15 / 12:15 / 18:15 / 翌0:15）巡回する。分を :00 から外しているのは、
-#   GitHub 側の混雑時刻を避けて実行の遅延を減らすため。
+#   配信元の公表は平日日中に日1〜2回なので、1日1回・朝の巡回で前日分をまとめて拾える。
+#   分を :00 ちょうどから外しているのは、GitHub 側の混雑時刻を避けて実行の遅延を減らすため。
 #
 # 何をするのか
 #   1. tools/watch_gsi.py が配信元を巡回して watch/gsi_snapshot.json を更新する
@@ -17,7 +17,7 @@ name: Watch GSI page
 
 on:
   schedule:
-    - cron: '15 21,3,9,15 * * *' # UTC。JST では 6:15 / 12:15 / 18:15 / 0:15
+    - cron: '7 22 * * *' # UTC。JST では毎朝 7:07
   workflow_dispatch:
     inputs:
       audit_only:

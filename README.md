@@ -122,8 +122,11 @@ python3 tools/watch_gsi.py --update   # 差分を表示し watch/gsi_snapshot.js
 python3 tools/watch_gsi.py --audit    # 配信中なのに layers.ts に無いタイルを棚卸し
 ```
 
-`.github/workflows/watch-gsi.yml` が1日4回（JST 6:15 / 12:15 / 18:15 / 0:15）これを回し、
+`.github/workflows/watch-gsi.yml` が毎朝1回（JST 7:07）これを回し、
 差分が出たらスナップショットを `main` にコミットして `gsi-update` ラベルの Issue を立てる。
+配信元の公表は平日日中に日1〜2回なので、朝1回で前日分をまとめて拾える。
+GitHub の `schedule` は遅延することがあり実行も保証されないので、急ぐときは
+Actions から手動実行するか、手元で `python3 tools/watch_gsi.py` を叩く。
 レイヤー追加そのものは Issue を見て人が行う（説明文・重なり順・ポップアップの設計は機械化できない）。
 
 見ているもの:
