@@ -3,6 +3,10 @@ name: Deploy viewer to GitHub Pages
 on:
   push:
     branches: [main]
+    # 巡回ワークフロー（watch-gsi.yml）が main に置くスナップショットはビューワの成果物に
+    # 影響しない。これを無視しないと、更新検知のたびに無意味な再デプロイが走る。
+    paths-ignore:
+      - 'watch/**'
   workflow_dispatch:
 
 permissions:

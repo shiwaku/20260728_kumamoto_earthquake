@@ -1,0 +1,100 @@
+name: Watch GSI page
+
+# 国土地理院の令和8年熊本地震ページを定期巡回し、更新・追加があれば Issue を立てる。
+#
+# なぜ cron なのか
+#   配信元は Last-Modified を返さないので、内容を取り込んで前回と比べる以外に更新を知る術がない。
+#   1日4回（JST 6:15 / 12:15 / 18:15 / 翌0:15）巡回する。分を :00 から外しているのは、
+#   GitHub 側の混雑時刻を避けて実行の遅延を減らすため。
+#
+# 何をするのか
+#   1. tools/watch_gsi.py が配信元を巡回して watch/gsi_snapshot.json を更新する
+#   2. 差分があれば Issue を立て、スナップショットを main にコミットする
+#   3. 実際のレイヤー追加作業（layers.ts の編集）は Issue を見て人が行う
+#
+# 差分の中身はスナップショットの git diff でも読める。本文テキストを行単位で保存しているので、
+# コミット差分がそのまま「配信元のどの一文が増えたか」になる。
+
+on:
+  schedule:
+    - cron: '15 21,3,9,15 * * *' # UTC。JST では 6:15 / 12:15 / 18:15 / 0:15
+  workflow_dispatch:
+    inputs:
+      audit_only:
+        description: 'スナップショットを更新せず、未収録タイルの棚卸しだけ表示する'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # スナップショットを main にコミットする
+  issues: write # 更新検知時に Issue を立てる
+
+# 巡回は重ねない。走っている間に次の cron が来たら、そちらを待たせる。
+concurrency:
+  group: watch-gsi
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 棚卸しのみ（手動実行時）
+        if: inputs.audit_only
+        run: python3 tools/watch_gsi.py --audit
+
+      - name: 配信元を巡回して差分を取る
+        if: ${{ !inputs.audit_only }}
+        id: watch
+        run: |
+          python3 tools/watch_gsi.py \
+            --update \
+            --report "$RUNNER_TEMP/report.md" \
+            --github-output "$GITHUB_OUTPUT"
+
+      # コミットより先に立てる。main が保護されていてプッシュが弾かれた場合でも、
+      # 検知したことだけは必ず手元に届くようにしたい。
+      - name: Issue を立てる
+        if: ${{ !inputs.audit_only && steps.watch.outputs.changed == 'true' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SUMMARY: ${{ steps.watch.outputs.summary }}
+        run: |
+          # ラベルは初回だけ作る。既にあれば黙って通す。
+          gh label create gsi-update --color BFD4F2 --description '配信元ページの更新検知' 2>/dev/null || true
+          {
+            echo "配信元ページに変更を検知しました。対応が必要なものがあれば、このIssueを起点にブランチを切ってください。"
+            echo
+            cat "$RUNNER_TEMP/report.md"
+            echo
+            echo "スナップショットの差分（どの一文が変わったか）: ${{ github.server_url }}/${{ github.repository }}/commits/main/watch/gsi_snapshot.json"
+            echo
+            echo "検知した実行: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } > "$RUNNER_TEMP/issue.md"
+          gh issue create \
+            --title "配信元更新: $SUMMARY ($(TZ=Asia/Tokyo date +%Y-%m-%d))" \
+            --label gsi-update \
+            --body-file "$RUNNER_TEMP/issue.md"
+
+      - name: スナップショットをコミット
+        if: ${{ !inputs.audit_only && steps.watch.outputs.changed == 'true' }}
+        env:
+          # 配信元由来の文字列なので、シェルに直接展開せず環境変数で渡す
+          SUMMARY: ${{ steps.watch.outputs.summary }}
+        run: |
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add watch/gsi_snapshot.json
+          git commit -m "chore(watch): 国土地理院ページのスナップショットを更新" -m "$SUMMARY"
+          # 直前に人手のコミットが入っていても落ちないように追いつく
+          git pull --rebase --autostash origin main
+          git push origin HEAD:main
+
+      - name: 変更なし
+        if: ${{ !inputs.audit_only && steps.watch.outputs.changed != 'true' }}
+        run: echo '配信元に変更なし。'
