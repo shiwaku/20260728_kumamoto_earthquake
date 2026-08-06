@@ -611,7 +611,8 @@ export const LAYERS: LayerDef[] = [
     legendImage: 'https://maps.gsi.go.jp/legend/20260729kumamoto_syamenhoukai_dosekiryu_taiseki_legend.png',
     attribution: GSI_ATTR,
     desc:
-      '7月29日撮影の正射画像を判読して作成（長さまたは幅がおおむね30m以上）。' +
+      '7月29日撮影の正射画像を判読して作成（長さまたは幅がおおむね30m以上）。8/6に一部更新。' +
+      '灰色は土石流ではなく雲で判読できなかった範囲。' +
       '現地調査は行われていないため、崩壊箇所が抜けていたり、本地震によらない箇所を含むことがある。',
   },
   {
@@ -631,6 +632,27 @@ export const LAYERS: LayerDef[] = [
       '7月31日・8月1日撮影の正射画像を8月4日に判読して作成（長さまたは幅がおおむね30m以上）。' +
       '八代地区と違い土石流の区分は無い。現地調査は行われていないため、崩壊箇所が抜けていたり、' +
       '本地震によらない箇所を含むことがある。',
+  },
+  {
+    kind: 'geojson',
+    render: 'polygon',
+    key: 'syamen-k1',
+    name: '斜面崩壊・堆積分布 熊本1地区',
+    group: '被害状況',
+    on: false,
+    opacity: 1,
+    z: 42,
+    // 配信元のレイヤーIDは `syamenhouka`（`syamenhoukai` ではない）。八代・熊本3地区と綴りが
+    // 揃っていないが配信元の実際のIDがこれで、`syamenhoukai_taiseki_kumamoto1` は404になる。
+    data: 'https://maps.gsi.go.jp/xyz/20260729kumamoto_syamenhouka_taiseki_kumamoto1/2/3/1.geojson',
+    // 凡例は熊本3地区と共有（こちらは `syamenhoukai` の綴り。レイヤーIDと不一致だが実在する方）。
+    legendImage: 'https://maps.gsi.go.jp/legend/20260729kumamoto_syamenhoukai_taiseki_legend.png',
+    attribution: GSI_ATTR,
+    desc:
+      '8月3日撮影の正射画像を8月6日に判読して作成。判読範囲は熊本市西区河内町から大津町までの' +
+      '東西約29kmだが、崩壊・堆積範囲は熊本市内の3面（西区谷尾崎町・島崎、中央区二の丸）' +
+      'だけで数10m規模。他2地区より際立って少ない。' +
+      '現地調査は行われていないため、本地震によらない箇所を含むことがある。',
   },
   {
     kind: 'geojson',
