@@ -1,19 +1,20 @@
 {
- "fetched_at": "2026-08-06T21:00:48Z",
+ "fetched_at": "2026-08-07T22:43:13Z",
  "pages": {
   "20260728_kumamoto_earthquake": {
    "files": [
     "https://www.gsi.go.jp/common/000084060.pdf",
-    "https://www.gsi.go.jp/common/000280034.pdf",
+    "https://www.gsi.go.jp/common/000280103.pdf",
     "https://www1.gsi.go.jp/geowww/katsudanso/geotiff/181.zip",
     "https://www1.gsi.go.jp/geowww/katsudanso/geotiff/182.zip",
     "https://www1.gsi.go.jp/geowww/katsudanso/geotiff/193.zip",
-    "https://www1.gsi.go.jp/geowww/katsudanso/geotiff/194.zip"
+    "https://www1.gsi.go.jp/geowww/katsudanso/geotiff/194.zip",
+    "https://www1.gsi.go.jp/geowww/saigai/20260728_kumamoto/hokai/kumamoto_yatsushiro0807.zip"
    ],
    "index": [
     {
      "no": "1",
-     "note": "７月２９日公表、８月６日更新",
+     "note": "７月２９日公表、８月７日更新",
      "title": "空中写真（垂直写真・斜め写真・正射画像）"
     },
     {
@@ -53,7 +54,7 @@
     },
     {
      "no": "9",
-     "note": "７月３０日公表、８月６日更新",
+     "note": "７月３０日公表、８月７日更新",
      "title": "斜面崩壊・堆積分布データ"
     },
     {
@@ -70,6 +71,11 @@
      "no": "10-2",
      "note": "８月５日公表",
      "title": "「だいち２号」及び「だいち４号」の衛星画像解析による令和８年熊本地震に伴う変位境界（速報）"
+    },
+    {
+     "no": "10-3",
+     "note": "８月７日公表",
+     "title": "令和8年熊本地震前後の画像と数値表層モデルから判読された変位境界（速報）"
     },
     {
      "no": "11",
@@ -137,7 +143,13 @@
       "○熊本１地区（ 熊本県熊本市、合志市、大津町、菊陽町、西原村、益城町 ）（8/3撮影）",
       "（地理院地図による閲覧）",
       "※空中写真から自動処理により作成した正射画像です。このため、構造物等に歪みやズレ、不連続が生じているように見える場合があります。また、雲等の影響により地表が見えにくい場合があります。",
+      "○熊本２地区（ 熊本県熊本市、宇土市、西原村、御船町、嘉島町、益城町、甲佐町、山都町 ）（ 7/29、8/2 撮影）",
+      "（地理院地図による閲覧）",
+      "※空中写真から自動処理により作成した正射画像です。このため、構造物等に歪みやズレ、不連続が生じているように見える場合があります。また、雲等の影響により地表が見えにくい場合があります。",
       "○熊本３地区（熊本県熊本市、宇土市、宇城市、美里町、御船町、甲佐町）（7/31、8/1撮影）",
+      "（地理院地図による閲覧）",
+      "※空中写真から自動処理により作成した正射画像です。このため、構造物等に歪みやズレ、不連続が生じているように見える場合があります。また、雲等の影響により地表が見えにくい場合があります。",
+      "○熊本４地区（熊本県八代市、宇土市、宇城市、美里町、甲佐町、氷川町）（7/30撮影）",
       "（地理院地図による閲覧）",
       "※空中写真から自動処理により作成した正射画像です。このため、構造物等に歪みやズレ、不連続が生じているように見える場合があります。また、雲等の影響により地表が見えにくい場合があります。"
      ],
@@ -145,6 +157,7 @@
       "20260729kumamoto_kumamoto1_0729suichoku_sokuho",
       "20260729kumamoto_kumamoto1_0803do",
       "20260729kumamoto_kumamoto1_0803suichoku",
+      "20260729kumamoto_kumamoto2_0729_0802do",
       "20260729kumamoto_kumamoto2_0729suichoku_sokuho",
       "20260729kumamoto_kumamoto2_0802suichoku_sokuho",
       "20260729kumamoto_kumamoto3_0729suichoku_sokuho",
@@ -153,6 +166,7 @@
       "20260729kumamoto_kumamoto3_0731suichoku_sokuho",
       "20260729kumamoto_kumamoto3_0801suichoku",
       "20260729kumamoto_kumamoto4_0729naname",
+      "20260729kumamoto_kumamoto4_0730do",
       "20260729kumamoto_kumamoto4_0730suichoku_sokuho",
       "20260729kumamoto_yatsushiro_0729do",
       "20260729kumamoto_yatsushiro_0729do_sokuho",
@@ -262,7 +276,9 @@
     },
     {
      "anchor": "9",
-     "files": [],
+     "files": [
+      "https://www1.gsi.go.jp/geowww/saigai/20260728_kumamoto/hokai/kumamoto_yatsushiro0807.zip"
+     ],
      "heading": "９．斜面崩壊・堆積分布データ",
      "text": [
       "９．斜面崩壊・堆積分布データ",
@@ -275,12 +291,21 @@
       "（地理院地図による閲覧）",
       "○令和8年8月6日発表",
       "熊本１地区　（8/3撮影の空中写真から8/6判読）",
-      "（地理院地図による閲覧）"
+      "（地理院地図による閲覧）",
+      "○令和8年8月7日発表",
+      "熊本２地区　（ 7/29 、 8/2 撮影の空中写真から 8/7 判読 ）",
+      "（地理院地図による閲覧）",
+      "熊本４地区　（7/30撮影の空中写真から8/4判読）",
+      "（地理院地図による閲覧）",
+      "令和８年熊本地震 斜面崩壊・堆積分布データ（熊本１～４地区、八代地区）",
+      "斜面崩壊・堆積分布データ（熊本１～4地区、八代地区）GeoJSONファイルのダウンロード （ZIP形式：42KB）〔8月7日作成〕"
      ],
      "tiles": [
       "20260729kumamoto_syamenhouka_taiseki_kumamoto1",
       "20260729kumamoto_syamenhoukai_dosekiryu_taiseki_yatsushiro",
-      "20260729kumamoto_syamenhoukai_taiseki_kumamoto3"
+      "20260729kumamoto_syamenhoukai_taiseki_kumamoto2",
+      "20260729kumamoto_syamenhoukai_taiseki_kumamoto3",
+      "20260729kumamoto_syamenhoukai_taiseki_kumamoto4"
      ]
     },
     {
@@ -309,6 +334,16 @@
      "text": [
       "１０－２．「だいち２号」及び「だいち４号」の衛星画像解析による令和８年熊本地震に伴う変位境界（速報）",
       "「だいち２号」及び「だいち４号」の衛星画像解析による令和８年熊本地震に伴う変位境界（速報）"
+     ],
+     "tiles": []
+    },
+    {
+     "anchor": "10-3",
+     "files": [],
+     "heading": "１０－３．令和8年熊本地震前後の画像と数値表層モデルから判読された変位境界（速報）",
+     "text": [
+      "１０－３．令和8年熊本地震前後の画像と数値表層モデルから判読された変位境界（速報）",
+      "令和8年熊本地震前後の画像と数値表層モデルから判読された変位境界（速報）"
      ],
      "tiles": []
     },
@@ -386,7 +421,7 @@
       "（震源断層モデルに関すること ）",
       "国土地理院　地理地殻活動研究センター",
       "地殻変動研究室長　　　TEL 029-864-6925（直通）",
-      "（亀裂分布図・亀裂分布データに関すること）",
+      "（地震前後の画像と数値表層モデルから判読された変位境界に関すること）",
       "国土地理院 地理地殻活動研究センター",
       "地理情報解析研究室長　　TEL 029-864-5942（直通）",
       "PDF形式のファイルをご覧いただく場合には、Adobe Readerが必要です。",
@@ -432,6 +467,10 @@
      "url": "https://www.gsi.go.jp/uchusokuchi/uchusokuchi41008.html"
     },
     {
+     "text": "令和8年熊本地震前後の画像と数値表層モデルから判読された変位境界（速報）",
+     "url": "https://www.gsi.go.jp/chirijoho/chirijoho41073.html"
+    },
+    {
      "text": "https://www.gsi.go.jp/chizuhensyu/chizuhensyu41047.html",
      "url": "https://www.gsi.go.jp/chizuhensyu/chizuhensyu41047.html"
     }
@@ -440,6 +479,7 @@
     "20260729kumamoto_kumamoto1_0729suichoku_sokuho",
     "20260729kumamoto_kumamoto1_0803do",
     "20260729kumamoto_kumamoto1_0803suichoku",
+    "20260729kumamoto_kumamoto2_0729_0802do",
     "20260729kumamoto_kumamoto2_0729suichoku_sokuho",
     "20260729kumamoto_kumamoto2_0802suichoku_sokuho",
     "20260729kumamoto_kumamoto3_0729suichoku_sokuho",
@@ -448,10 +488,13 @@
     "20260729kumamoto_kumamoto3_0731suichoku_sokuho",
     "20260729kumamoto_kumamoto3_0801suichoku",
     "20260729kumamoto_kumamoto4_0729naname",
+    "20260729kumamoto_kumamoto4_0730do",
     "20260729kumamoto_kumamoto4_0730suichoku_sokuho",
     "20260729kumamoto_syamenhouka_taiseki_kumamoto1",
     "20260729kumamoto_syamenhoukai_dosekiryu_taiseki_yatsushiro",
+    "20260729kumamoto_syamenhoukai_taiseki_kumamoto2",
     "20260729kumamoto_syamenhoukai_taiseki_kumamoto3",
+    "20260729kumamoto_syamenhoukai_taiseki_kumamoto4",
     "20260729kumamoto_yatsushiro_0729do",
     "20260729kumamoto_yatsushiro_0729do_sokuho",
     "20260729kumamoto_yatsushiro_0729naname",
@@ -604,7 +647,7 @@
     "「だいち2号」及び「だいち4号」観測データ（7月29日昼）の干渉解析による令和8年熊本地震に伴う地殻変動（2026年8月5日発表）（PDF形式：377KB）",
     "「だいち2号」観測データ（7月28日夜）の干渉解析による令和8年熊本地震に伴う地殻変動（2026年8月5日発表）（PDF形式：374KB）",
     "「だいち2号」及び「だいち4号」観測データの2.5次元解析による令和8年熊本地震に伴う地殻変動（2026年7月31日発表）（PDF形式：808KB）",
-    "「だいち4号」観測データ（7月30日夜）の干渉解析による令和8年熊本地震に伴う地殻変動（2026年7月30日発表）（PDF形式：640KB）",
+    "「だいち4号」観測データ（7月29日夜）の干渉解析による令和8年熊本地震に伴う地殻変動（2026年7月30日発表）（PDF形式：640KB）",
     "「だいち2号」観測データ（7月28日夜）の干渉解析による令和8年熊本地震に伴う地殻変動（2026年7月29日発表）（PDF形式：389KB）",
     "本ページで公開している地理空間情報のご利用について",
     "国土地理院コンテンツ利用規約 に従い、出典を明示いただくだけで、転載も含めご自由にお使いいただけます。",
@@ -794,13 +837,14 @@
    "files": [
     "https://www.gsi.go.jp/common/000280069.pdf"
    ],
-   "last_update_label": "最終更新日：2026年7月31日",
+   "last_update_label": "最終更新日：2026年8月7日",
    "text": [
     "id=\"main\">",
     "令和8年熊本地震前後の画像から判読された変位境界（速報）（八代地区）",
     "令和8年熊本地震前後の画像から判読された変位境界（速報）（八代地区）",
     "令和8年熊本地震における地表変化に着目して、今後の防災や復興計画に資するため、地震前後の空中写真画像から変位を判読し、変位が不連続になる境界（変位境界）を明らかにしました。変位境界は八代平野東端に沿って北東-南西方向にみられ、最大で2.1mの右横ずれが計測されました。（2026年7月31日）",
     "令和8年熊本地震前後の画像から判読された変位境界（速報）（八代地区）（PDF形式：2.6MB）",
+    "本研究レポートの後続レポートはこちらです。",
     "こちらは氷川町宮原付近の地震前後の空中写真画像のGIFアニメです。（赤破線は変位境界）",
     "ご意見・ご質問の宛先",
     "国土交通省 国土地理院 地理地殻活動研究センター 地理情報解析研究室",
@@ -813,6 +857,31 @@
    "tiles": [],
    "title": "令和8年熊本地震前後の画像から判読された変位境界（速報）（八代地区） | 国土地理院",
    "url": "https://www.gsi.go.jp/chirijoho/chirijoho41071.html"
+  },
+  "chirijoho41073": {
+   "files": [
+    "https://gisstar.gsi.go.jp/R8kumamoto/Figures(GeoTIFF).zip",
+    "https://www.gsi.go.jp/common/000280102.pdf"
+   ],
+   "last_update_label": "最終更新日：2026年8月7日",
+   "text": [
+    "id=\"main\">",
+    "令和8年熊本地震前後の画像と数値表層モデルから判読された変位境界（速報）",
+    "令和8年熊本地震前後の画像と数値表層モデルから判読された変位境界（速報）",
+    "令和８年熊本地震前後の空中写真画像と数値表層モデルから変位を判読し、八代市から御船町にかけて、変位が不連続になる境界を明らかにしました。変位境界は日奈久断層帯に沿って認められ、南側の八代平野ではステップを伴いながら概ね連続的に分布しました。変位境界における最大のずれ量は、水平方向では氷川町野津地区で右横ずれ約2.1 m、上下方向では八代市上片町地区で北西落ち約1.3 mを示しました。（2026年8月7日）",
+    "令和8年熊本地震前後の画像と数値表層モデルから判読された変位境界（速報）（PDF形式：2MB）",
+    "位置情報付き図(GeoTIFF)(速報)（ZIP形式：20MB）",
+    "ご意見・ご質問の宛先",
+    "国土交通省 国土地理院 地理地殻活動研究センター 地理情報解析研究室",
+    "住所：〒305-0811 茨城県つくば市北郷一番",
+    "e-mail：gsi-gia+1=gxb.mlit.go.jp（=を@にしてください）",
+    "[ 「研究室のページ」に戻る ]",
+    "ページトップへ",
+    "<div"
+   ],
+   "tiles": [],
+   "title": "令和8年熊本地震前後の画像と数値表層モデルから判読された変位境界（速報） | 国土地理院",
+   "url": "https://www.gsi.go.jp/chirijoho/chirijoho41073.html"
   },
   "chizuhensyu41047": {
    "files": [
