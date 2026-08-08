@@ -39,6 +39,9 @@ const MLIT_ATTR =
 const SAR_ATTR =
   '<a href="https://www.gsi.go.jp/uchusokuchi/20260728kumamoto.html" target="_blank" rel="noopener">国土地理院（解析）</a>' +
   '／<a href="https://www.eorc.jaxa.jp/ALOS/" target="_blank" rel="noopener">JAXA（原初データ所有）</a>'
+/** 空中写真・DSM判読の変位境界は地理地殻活動研究センターの研究レポートで、JAXA は関わらない。 */
+const HENNI_DSM_ATTR =
+  '<a href="https://www.gsi.go.jp/chirijoho/chirijoho41073.html" target="_blank" rel="noopener">国土地理院 地理地殻活動研究センター</a>'
 /** 変位境界は SAR と同じ解析／原初データだが、公表ページが別。 */
 const HENNI_ATTR =
   '<a href="https://www.gsi.go.jp/uchusokuchi/uchusokuchi41008.html" target="_blank" rel="noopener">国土地理院（判読）</a>' +
@@ -908,6 +911,37 @@ export const LAYERS: LayerDef[] = [
       '断層運動に伴って現れたとみられる境界。' +
       '位置は数10〜100m程度の誤差を含み得るため、配信元は縮尺の目安をズームレベル15以下としている。' +
       '色は公表図の黒からマゼンタへ変えてある（ダークテーマや空中写真の上でも沈まないようにするため）。',
+  },
+  {
+    kind: 'raster',
+    key: 'henni-dsm',
+    name: '変位境界（写真・DSM判読 8/7速報）',
+    group: '地殻変動',
+    on: false,
+    // 公表図の線は地上換算で約65m 幅あり、拡大すると下の空中写真を隠してしまう。
+    // 透かして重ねられるように既定を下げてある（スライダーで戻せる）。
+    opacity: 0.6,
+    // SAR判読の変位境界（henni）のすぐ前面。2本を重ねて判読の食い違いを見る使い方をする。
+    z: 37,
+    // 配信元はベクタを出しておらず、成果物は PDF と「位置情報付き図」の GeoTIFF だけ。
+    // 図1から赤線だけを色で抜いて透過タイルに焼いたもの。生成は
+    // tools/build_displacement_boundary_dsm.py。線をベクタに起こさない理由もそちらに書いてある。
+    tiles: [`${import.meta.env.BASE_URL}data/henni_dsm/{z}/{x}/{y}.png`],
+    // 図1が約22 m/px なので、等倍にあたる z13 までしか焼いていない。以降は拡大表示。
+    minzoom: 9,
+    maxzoom: 13,
+    tileSize: 256,
+    bounds: [130.5615, 32.4356, 130.8252, 32.7688],
+    legend: [{ label: '判読された変位境界', color: '#e62026', shape: 'line' }],
+    attribution: HENNI_DSM_ATTR,
+    desc:
+      '地震前後の空中写真画像と数値表層モデル（DSM）から変位を判読した境界で、SAR判読の変位境界とは別の手法によるもの。' +
+      '八代市から御船町にかけて日奈久断層帯に沿って認められ、南側の八代平野ではステップを伴いながら概ね連続する。' +
+      'ずれ量は水平方向が氷川町野津地区で右横ずれ約2.1m、上下方向が八代市上片町地区で北西落ち約1.3mが最大。' +
+      '実線と破線の区別は公表図のまま（破線は推定区間）。' +
+      '線の太さは公表図の作図上の太さ（地上換算で約65m）で、変位帯の幅ではない。' +
+      '判読位置は数10m程度の誤差を含み、拡大しても精度は上がらない。' +
+      '地区ごとのずれ量の数値は配信元のレポート（PDF）を見る。',
   },
   {
     kind: 'raster',
