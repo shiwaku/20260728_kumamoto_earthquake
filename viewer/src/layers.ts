@@ -657,6 +657,45 @@ export const LAYERS: LayerDef[] = [
   {
     kind: 'geojson',
     render: 'polygon',
+    key: 'syamen-k2',
+    name: '斜面崩壊・堆積分布 熊本2地区',
+    group: '被害状況',
+    on: false,
+    opacity: 1,
+    z: 43,
+    data: 'https://maps.gsi.go.jp/xyz/20260729kumamoto_syamenhoukai_taiseki_kumamoto2/2/3/1.geojson',
+    legendImage: 'https://maps.gsi.go.jp/legend/20260729kumamoto_syamenhoukai_taiseki_legend.png',
+    attribution: GSI_ATTR,
+    desc:
+      '7月29日・8月2日撮影の正射画像を8月7日に判読して作成（長さまたは幅がおおむね30m以上）。' +
+      '判読範囲は熊本市から宇土市・益城町・御船町・甲佐町・山都町にかけての約230km²だが、' +
+      '崩壊・堆積範囲は益城町下陳と御船町上野の2面・計約600m²だけで、熊本1地区と同様に際立って少ない。' +
+      '現地調査は行われていないため、崩壊箇所が抜けていたり、' +
+      '本地震によらない箇所を含むことがある。',
+  },
+  {
+    kind: 'geojson',
+    render: 'polygon',
+    key: 'syamen-k4',
+    name: '斜面崩壊・堆積分布 熊本4地区',
+    group: '被害状況',
+    on: false,
+    opacity: 1,
+    z: 44,
+    data: 'https://maps.gsi.go.jp/xyz/20260729kumamoto_syamenhoukai_taiseki_kumamoto4/2/3/1.geojson',
+    legendImage: 'https://maps.gsi.go.jp/legend/20260729kumamoto_syamenhoukai_taiseki_legend.png',
+    attribution: GSI_ATTR,
+    desc:
+      '7月30日撮影の正射画像を8月4日に判読して作成（長さまたは幅がおおむね30m以上）。' +
+      '最大震度7を観測した宇城市・氷川町を含む約200km²を判読しているが、崩壊・堆積範囲は' +
+      '美里町佐俣・小市野と宇城市小川町の4面・計約2,000m²にとどまる。' +
+      '八代地区と同じく灰色は雲で判読できなかった範囲で、21面あるが判読範囲の1.7%にすぎない。' +
+      '現地調査は行われていないため、崩壊箇所が抜けていたり、' +
+      '本地震によらない箇所を含むことがある。',
+  },
+  {
+    kind: 'geojson',
+    render: 'polygon',
     key: 'road-restriction',
     name: '道路規制（7/31 7:30時点）',
     group: '被害状況',
@@ -749,6 +788,47 @@ export const LAYERS: LayerDef[] = [
       '地震から6日後の撮影で、収録している正射画像のうち最も新しい。' +
       '空中写真から自動処理で作成しているため構造物等に歪み・ズレ・不連続が生じて見えることがあり、' +
       '雲で地表が見えにくい範囲もある。同じ範囲の7/29の状況は垂直写真（熊本1地区 7/29撮影）で見る。',
+  },
+  {
+    kind: 'raster',
+    key: 'ortho-k2',
+    name: '正射画像 熊本2地区 7/29・8/2撮影',
+    group: '空中写真',
+    on: false,
+    opacity: 1,
+    z: 21,
+    tiles: ['https://maps.gsi.go.jp/xyz/20260729kumamoto_kumamoto2_0729_0802do/{z}/{x}/{y}.png'],
+    minzoom: 10,
+    maxzoom: 18,
+    tileSize: 256,
+    // z13 のタイル到達確認（475枚を走査して27枚が200）から求めた実測 bbox。
+    // 熊本1地区の南隣、熊本市東部から益城町・西原村へ延びる東西の帯。
+    bounds: [130.5176, 32.6949, 130.957, 32.8057],
+    attribution: GSI_ATTR,
+    desc:
+      '2回にわたる撮影を1枚に合成した正射画像。構造物等に歪み・ズレ・不連続が生じて見えることがあり、' +
+      '雲で地表が見えにくい範囲もある。斜面崩壊・堆積分布（熊本2地区）はこの画像を判読して作られている。',
+  },
+  {
+    kind: 'raster',
+    key: 'ortho-k4',
+    name: '正射画像 熊本4地区 7/30撮影',
+    group: '空中写真',
+    on: false,
+    opacity: 1,
+    z: 22,
+    tiles: ['https://maps.gsi.go.jp/xyz/20260729kumamoto_kumamoto4_0730do/{z}/{x}/{y}.png'],
+    minzoom: 10,
+    maxzoom: 18,
+    tileSize: 256,
+    // z13 のタイル到達確認（475枚を走査して33枚が200）から求めた実測 bbox。
+    // 八代地区と熊本3地区の間、宇城市・氷川町など最大震度7を観測した一帯。
+    bounds: [130.4736, 32.5468, 130.8691, 32.6949],
+    attribution: GSI_ATTR,
+    desc:
+      '最大震度7を観測した宇城市・氷川町を含む一帯の正射画像。' +
+      '空中写真から自動処理で作成しているため構造物等に歪み・ズレ・不連続が生じて見えることがあり、' +
+      '雲で地表が見えにくい範囲もある。斜面崩壊・堆積分布（熊本4地区）はこの画像を判読して作られている。',
   },
   // 垂直写真は地区×撮影日で11レイヤーある。定義は SUICHOKU_SET を見る。
   ...SUICHOKU_LAYERS,
