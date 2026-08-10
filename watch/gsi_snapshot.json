@@ -1,10 +1,10 @@
 {
- "fetched_at": "2026-08-07T22:43:13Z",
+ "fetched_at": "2026-08-10T22:44:29Z",
  "pages": {
   "20260728_kumamoto_earthquake": {
    "files": [
     "https://www.gsi.go.jp/common/000084060.pdf",
-    "https://www.gsi.go.jp/common/000280103.pdf",
+    "https://www.gsi.go.jp/common/000280141.pdf",
     "https://www1.gsi.go.jp/geowww/katsudanso/geotiff/181.zip",
     "https://www1.gsi.go.jp/geowww/katsudanso/geotiff/182.zip",
     "https://www1.gsi.go.jp/geowww/katsudanso/geotiff/193.zip",
@@ -79,7 +79,7 @@
     },
     {
      "no": "11",
-     "note": "８月５日公表",
+     "note": "８月５日公表、８月１０日更新",
      "title": "地理院地図（中・小縮尺タイル）リニューアル版（試験公開）"
     }
    ],
@@ -358,7 +358,8 @@
       "標準地図（中・小縮尺タイル）リニューアル版の詳細については、以下のページをご覧ください。",
       "https://www.gsi.go.jp/chizuhensyu/chizuhensyu41047.html",
       "ズームレベル14：令和8年8月5日公開",
-      "〇リニューアル版（ZL14）",
+      "ズームレベル9～13：令和8年8月10日公開",
+      "〇リニューアル版（ZL9~14）",
       "（地理院地図による閲覧）"
      ],
      "tiles": [
