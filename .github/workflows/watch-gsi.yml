@@ -76,10 +76,24 @@ jobs:
             echo
             echo "検知した実行: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           } > "$RUNNER_TEMP/issue.md"
-          gh issue create \
+          url=$(gh issue create \
             --title "配信元更新: $SUMMARY ($(TZ=Asia/Tokyo date +%Y-%m-%d))" \
             --label gsi-update \
-            --body-file "$RUNNER_TEMP/issue.md"
+            --body-file "$RUNNER_TEMP/issue.md")
+          echo "$url"
+
+          # 番号が決まってから閉じ方を書き足す。コピーして貼れる `Closes #N` がその場に無いと、
+          # 素の参照だけ書いて閉じ忘れる（PR #11 と Issue #10 で実際にそうなった）。
+          number=${url##*/}
+          {
+            echo
+            echo '---'
+            echo "対応したら、PR本文に \`Closes #$number\` と書く。マージ時にこのIssueは自動で閉じる。"
+            echo "素の \`#$number\` 参照でも close-gsi-issue.yml が拾って閉じる。"
+            echo '対応不要と判断した場合は、その理由をコメントして閉じる。'
+            echo '3日以上開いたままだと、毎朝の巡回がこのIssueに声をかける。'
+          } >> "$RUNNER_TEMP/issue.md"
+          gh issue edit "$number" --body-file "$RUNNER_TEMP/issue.md"
 
       - name: スナップショットをコミット
         if: ${{ !inputs.audit_only && steps.watch.outputs.changed == 'true' }}
@@ -98,3 +112,54 @@ jobs:
       - name: 変更なし
         if: ${{ !inputs.audit_only && steps.watch.outputs.changed != 'true' }}
         run: echo '配信元に変更なし。'
+
+      # 検知は自動だが、閉じるのは人の判断（対応した／対応不要）なので放っておくと溜まる。
+      # 差分がない日も走らせて、開いたままの検知 Issue に声をかける。
+      # コミットのプッシュが弾かれても声かけは通したいので !cancelled() で回す。
+      - name: 開いたままの検知 Issue に声をかける
+        if: ${{ !cancelled() && !inputs.audit_only }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          STALE_DAYS=3 # これだけ開いていたら声をかける
+          RENOTIFY_DAYS=7 # 同じ Issue への次の声かけまで待つ日数
+          # 自分の声かけを見分ける目印。HTML コメントなので Issue 上には表示されない。
+          MARKER='<!-- gsi-update-stale-reminder -->'
+
+          now=$(date -u +%s)
+          open=$(gh issue list --label gsi-update --state open --limit 50 \
+            --json number,createdAt --jq '.[] | "\(.number) \(.createdAt)"')
+
+          if [ -z "$open" ]; then
+            echo '開いている検知 Issue はない。'
+            exit 0
+          fi
+
+          while read -r number created; do
+            [ -n "$number" ] || continue
+            age=$(( (now - $(date -u -d "$created" +%s)) / 86400 ))
+            if [ "$age" -lt "$STALE_DAYS" ]; then
+              echo "#$number: $age 日。まだ声をかけない"
+              continue
+            fi
+            # 前回の声かけからの経過で黙るかを決める。毎朝コメントしたら通知が意味を失う。
+            last=$(gh issue view "$number" --json comments \
+              | jq -r --arg m "$MARKER" '[.comments[] | select(.body | contains($m)) | .createdAt] | max // empty')
+            if [ -n "$last" ]; then
+              since=$(( (now - $(date -u -d "$last" +%s)) / 86400 ))
+              if [ "$since" -lt "$RENOTIFY_DAYS" ]; then
+                echo "#$number: $since 日前に声をかけたので黙る"
+                continue
+              fi
+            fi
+            gh issue comment "$number" --body "$MARKER
+          この検知 Issue は $age 日開いたままです。
+
+          - レイヤーの追加・差し替えが要るなら、このIssueを起点にブランチを切る（PR本文に \`Closes #$number\` と書けばマージで閉じる）
+          - 配信元の体裁変更などで対応不要なら、理由をコメントして閉じる
+
+          （$RENOTIFY_DAYS 日おきに声をかけます）"
+            echo "#$number: 声をかけた（$age 日）"
+          done <<< "$open"

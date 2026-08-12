@@ -136,6 +136,15 @@ GitHub の `schedule` は遅延することがあり実行も保証されない�
 Actions から手動実行するか、手元で `python3 tools/watch_gsi.py` を叩く。
 レイヤー追加そのものは Issue を見て人が行う（説明文・重なり順・ポップアップの設計は機械化できない）。
 
+立てた Issue を閉じるところまでを仕組みにしている。検知だけ自動で後始末が手作業だと、
+開いている Issue が未対応なのか閉じ忘れなのか判らなくなる。
+
+| いつ | 何が起きるか |
+| --- | --- |
+| Issue の起票時 | 本文の末尾に、その番号で組み立てた `Closes #N` を書き足す。貼るだけで済むようにしておく |
+| 対応PRのマージ時 | `.github/workflows/close-gsi-issue.yml` が PR のタイトル・本文・ブランチ名から番号を拾い、`gsi-update` ラベルの open な Issue だけを閉じる。`Closes` を書き忘れて素の `#13` と書いても閉じる（PR #11 が `Issue #10` と書いて閉じ忘れた実例がある） |
+| 3日以上開いたまま | 毎朝の巡回が「対応するか、対応不要なら閉じるか」を Issue にコメントする。同じ Issue への再通知は7日おき |
+
 見ているもの:
 
 | 対象 | 何が分かるか |
@@ -219,7 +228,8 @@ Actions から手動実行するか、手元で `python3 tools/watch_gsi.py` を
 
 ```
 .github/workflows/deploy.yml    GitHub Pages へのデプロイ
-.github/workflows/watch-gsi.yml 配信元ページの定期巡回（差分があれば Issue を立てる）
+.github/workflows/watch-gsi.yml 配信元ページの定期巡回（差分があれば Issue を立てる、放置は催促する）
+.github/workflows/close-gsi-issue.yml 対応PRのマージで検知 Issue を閉じる
 raw/                            取得した原本（J-RISQ の KML、主要活断層帯の GeoJSON、変位境界の ZIP）
 tools/                          同梱データの生成スクリプトとアイコン生成
 tools/watch_gsi.py              配信元ページの巡回と差分検知

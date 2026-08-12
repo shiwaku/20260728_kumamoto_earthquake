@@ -1,0 +1,73 @@
+name: Close GSI issue on merge
+
+# 配信元の更新検知 Issue（gsi-update ラベル）を、対応 PR のマージで自動的に閉じる。
+#
+# なぜ必要なのか
+#   GitHub が自動で閉じてくれるのは PR 本文に `Closes #13` のような「閉じる語」を書いたときだけ。
+#   実際には PR #11 が素の `Issue #10` と書いたため自動クローズが働かず、手で閉じることになった。
+#   検知は自動なのに後始末が手作業のままだと、開いている Issue が未対応なのか閉じ忘れなのか判らなくなる。
+#
+# 何をするのか
+#   マージされた PR のタイトル・本文・ブランチ名から番号（`#13` / `issues/13` / `issue-13`）を拾い、
+#   その番号が「open な Issue で gsi-update ラベル付き」のときだけコメントして閉じる。
+#   PR 番号や無関係な Issue はラベルの照合で弾かれる。閉じる語が正しく書かれていれば GitHub 側が
+#   先に閉じているので、その場合は state が open でなく何もしない。何度走らせても結果は同じ。
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: read
+  issues: write # 検知 Issue を閉じる
+
+jobs:
+  close:
+    # fork からの PR ではトークンが読み取り専用で Issue を閉じられない（このリポジトリでは起きない想定）。
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: 参照されている検知 Issue を閉じる
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # PR のタイトル・本文は人手由来の文字列なので、シェルに展開せず環境変数のまま渡す
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          set -euo pipefail
+
+          numbers=$(printf '%s\n%s\n%s\n' "$PR_TITLE" "$PR_BODY" "$PR_BRANCH" \
+            | grep -oE '(#|issues/|issue-)[0-9]+' \
+            | grep -oE '[0-9]+' \
+            | sort -u -n || true)
+
+          if [ -z "$numbers" ]; then
+            echo 'PR から参照されている番号はない。'
+            exit 0
+          fi
+
+          for n in $numbers; do
+            if [ "$n" = "$PR_NUMBER" ]; then
+              continue
+            fi
+            # Issue か PR かはこの API では区別されないので、pull_request フィールドの有無で見る
+            if ! meta=$(gh api "repos/$GITHUB_REPOSITORY/issues/$n" 2>/dev/null); then
+              echo "#$n: 取得できないので飛ばす"
+              continue
+            fi
+            if ! jq -e '.pull_request == null and .state == "open"
+                        and ([.labels[].name] | index("gsi-update") != null)' >/dev/null <<< "$meta"; then
+              echo "#$n: open な gsi-update Issue ではないので飛ばす"
+              continue
+            fi
+            gh issue close "$n" \
+              --reason completed \
+              --comment "$PR_URL のマージで対応したため閉じます。"
+            echo "#$n: 閉じた"
+          done
