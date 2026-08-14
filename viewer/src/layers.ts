@@ -709,13 +709,34 @@ export const LAYERS: LayerDef[] = [
   {
     kind: 'geojson',
     render: 'polygon',
+    key: 'syamen-keno',
+    name: '斜面崩壊・堆積分布 熊本県央地区',
+    group: '被害状況',
+    on: false,
+    opacity: 1,
+    z: 45,
+    data: 'https://maps.gsi.go.jp/xyz/20260729kumamoto_syamenhoukai_taiseki_kumamotokeno/2/3/1.geojson',
+    legendImage: 'https://maps.gsi.go.jp/legend/20260729kumamoto_syamenhoukai_taiseki_legend.png',
+    attribution: GSI_ATTR,
+    desc:
+      '8月12日撮影の正射画像を8月13日に判読して作成（長さまたは幅がおおむね30m以上）。' +
+      '判読範囲は八代市・宇城市・美里町・御船町・甲佐町・山都町にまたがる約306km²で、' +
+      '崩壊・堆積範囲は12面・計約2万8,000m²で、最大の1面（八代市泉町栗木）だけで約8,600m²。' +
+      'これまでの5地区で最も多く、次に多い八代地区（9面・約1万2,600m²）の2倍以上ある。' +
+      '八代・熊本4地区と違い雲で判読できなかった範囲は無い。' +
+      '現地調査は行われていないため、崩壊箇所が抜けていたり、' +
+      '本地震によらない箇所を含むことがある。',
+  },
+  {
+    kind: 'geojson',
+    render: 'polygon',
     key: 'road-restriction',
     name: '道路規制（7/31 7:30時点）',
     group: '被害状況',
     on: false,
     opacity: 1,
     // 斜面崩壊より前面。線なので面に隠れないようにする。
-    z: 45,
+    z: 46,
     data: `${import.meta.env.BASE_URL}data/mlit/road_restriction.geojson`,
     legend: [
       { label: '全面通行止め（47区間）', color: '#e60012', shape: 'line' },
