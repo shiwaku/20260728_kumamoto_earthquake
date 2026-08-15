@@ -91,7 +91,7 @@ jobs:
             echo "対応したら、PR本文に \`Closes #$number\` と書く。マージ時にこのIssueは自動で閉じる。"
             echo "素の \`#$number\` 参照でも close-gsi-issue.yml が拾って閉じる。"
             echo '対応不要と判断した場合は、その理由をコメントして閉じる。'
-            echo '3日以上開いたままだと、毎朝の巡回がこのIssueに声をかける。'
+            echo '開いたままなら、翌朝の巡回がこのIssueに声をかける。'
           } >> "$RUNNER_TEMP/issue.md"
           gh issue edit "$number" --body-file "$RUNNER_TEMP/issue.md"
 
@@ -123,7 +123,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          STALE_DAYS=3 # これだけ開いていたら声をかける
+          # 「翌朝の巡回で声をかける」を時間で表す。日単位だと巡回の遅れで24時間を割ることがあり
+          # （cron は毎日同じ時刻だが起票は巡回の所要時間ぶん後ろにずれる）、翌朝は 0 日と数えられて
+          # 声かけが1日飛ぶ。20時間なら遅れが数時間あっても翌朝に必ず引っかかる。
+          # 0 にはできない。この声かけは起票と同じジョブで走るので、立てたばかりの Issue に
+          # その場でコメントしてしまう。
+          STALE_HOURS=20
           RENOTIFY_DAYS=7 # 同じ Issue への次の声かけまで待つ日数
           # 自分の声かけを見分ける目印。HTML コメントなので Issue 上には表示されない。
           MARKER='<!-- gsi-update-stale-reminder -->'
@@ -139,10 +144,16 @@ jobs:
 
           while read -r number created; do
             [ -n "$number" ] || continue
-            age=$(( (now - $(date -u -d "$created" +%s)) / 86400 ))
-            if [ "$age" -lt "$STALE_DAYS" ]; then
-              echo "#$number: $age 日。まだ声をかけない"
+            hours=$(( (now - $(date -u -d "$created" +%s)) / 3600 ))
+            if [ "$hours" -lt "$STALE_HOURS" ]; then
+              echo "#$number: $hours 時間。まだ声をかけない"
               continue
+            fi
+            # 2日目までは時間、それ以降は日で言う。「0日開いたまま」と書かないため。
+            if [ "$hours" -lt 48 ]; then
+              age="${hours}時間"
+            else
+              age="$(( hours / 24 ))日"
             fi
             # 前回の声かけからの経過で黙るかを決める。毎朝コメントしたら通知が意味を失う。
             last=$(gh issue view "$number" --json comments \
@@ -155,11 +166,11 @@ jobs:
               fi
             fi
             gh issue comment "$number" --body "$MARKER
-          この検知 Issue は $age 日開いたままです。
+          この検知 Issue は $age 開いたままです。
 
           - レイヤーの追加・差し替えが要るなら、このIssueを起点にブランチを切る（PR本文に \`Closes #$number\` と書けばマージで閉じる）
           - 配信元の体裁変更などで対応不要なら、理由をコメントして閉じる
 
           （$RENOTIFY_DAYS 日おきに声をかけます）"
-            echo "#$number: 声をかけた（$age 日）"
+            echo "#$number: 声をかけた（$age）"
           done <<< "$open"
