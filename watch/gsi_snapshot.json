@@ -1,5 +1,5 @@
 {
- "fetched_at": "2026-08-14T22:29:42Z",
+ "fetched_at": "2026-08-17T22:30:15Z",
  "pages": {
   "20260728_kumamoto_earthquake": {
    "files": [
@@ -14,7 +14,7 @@
    "index": [
     {
      "no": "1",
-     "note": "７月２９日公表、８月１２日更新",
+     "note": "７月２９日公表、８月１７日更新",
      "title": "空中写真（垂直写真・斜め写真・正射画像）"
     },
     {
@@ -103,7 +103,7 @@
       "（地理院地図による閲覧）",
       "※速報用写真のため、通常の航空カメラによる撮影画像より画質が低下しています。また、雲の影響により地上が見えにくい場合があります。",
       "垂直写真",
-      "○八代地区（（熊本県八代市、氷川町、芦北町）（7/29撮影）",
+      "○八代地区（熊本県八代市、氷川町、芦北町）（7/29撮影）",
       "（地理院地図による閲覧）",
       "※雲の影響により地上が見えにくい場合があります。",
       "○熊本１地区（熊本県熊本市、合志市、大津町、菊陽町、西原村、益城町）（7/29撮影）",
@@ -131,6 +131,9 @@
       "（地理院地図による閲覧）",
       "※雲の影響により地上が見えにくい場合があります。",
       "○熊本４地区（熊本県八代市、宇土市、宇城市、美里町、甲佐町、氷川町）（7/30撮影）",
+      "（地理院地図による閲覧）",
+      "※雲の影響により地上が見えにくい場合があります。",
+      "○熊本県央地区（熊本県八代市、宇城市、美里町、御船町、甲佐町、山都町）（8/12撮影）",
       "（地理院地図による閲覧）",
       "※雲の影響により地上が見えにくい場合があります。",
       "斜め写真",
@@ -180,6 +183,7 @@
       "20260729kumamoto_kumamoto4_0730do",
       "20260729kumamoto_kumamoto4_0730suichoku_sokuho",
       "20260729kumamoto_kumamotokeno_0812do_sokuho",
+      "20260729kumamoto_kumamotokeno_0812suichoku",
       "20260729kumamoto_kumamotokeno_0812suichoku_sokuho",
       "20260729kumamoto_yatsushiro_0729do",
       "20260729kumamoto_yatsushiro_0729do_sokuho",
@@ -544,6 +548,7 @@
     "20260729kumamoto_kumamoto4_0730do",
     "20260729kumamoto_kumamoto4_0730suichoku_sokuho",
     "20260729kumamoto_kumamotokeno_0812do_sokuho",
+    "20260729kumamoto_kumamotokeno_0812suichoku",
     "20260729kumamoto_kumamotokeno_0812suichoku_sokuho",
     "20260729kumamoto_syamenhouka_taiseki_kumamoto1",
     "20260729kumamoto_syamenhoukai_dosekiryu_taiseki_yatsushiro",
