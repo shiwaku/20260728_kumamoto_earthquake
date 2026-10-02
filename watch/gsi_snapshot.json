@@ -1,5 +1,5 @@
 {
- "fetched_at": "2026-09-30T01:11:08Z",
+ "fetched_at": "2026-10-02T01:29:27Z",
  "pages": {
   "20260728_kumamoto_earthquake": {
    "files": [
@@ -79,7 +79,7 @@
     },
     {
      "no": "11",
-     "note": "８月５日公表、８月１３日更新",
+     "note": "８月５日公表、１０月１日更新",
      "title": "地理院地図（中・小縮尺タイル）リニューアル版（試験公開）"
     },
     {
@@ -189,8 +189,7 @@
       "20260729kumamoto_yatsushiro_0729do_sokuho",
       "20260729kumamoto_yatsushiro_0729naname",
       "20260729kumamoto_yatsushiro_0729suichoku",
-      "20260729kumamoto_yatsushiro_0729suichoku_sokuho",
-      "std_renewal_test"
+      "20260729kumamoto_yatsushiro_0729suichoku_sokuho"
      ]
     },
     {
@@ -387,15 +386,14 @@
       "標準地図ズームレベル14：令和8年8月5日公開",
       "標準地図ズームレベル9～13：令和8年8月10日公開",
       "淡色地図ズームレベル9～14：令和8年8月13日公開",
+      "（2026年10月1日追記）",
+      "本ページで試験公開していた地理院地図（中・小縮尺タイル）リニューアル版は、令和8年9月30日に正式公開しました。",
       "〇標準地図リニューアル版（ZL9~14）",
       "（地理院地図による閲覧）",
       "〇淡色地図リニューアル版（ZL9~14）",
       "（地理院地図による閲覧）"
      ],
-     "tiles": [
-      "pale_renewal_test",
-      "std_renewal_test"
-     ]
+     "tiles": []
     },
     {
      "anchor": "12",
@@ -557,9 +555,7 @@
     "20260729kumamoto_yatsushiro_0729suichoku_sokuho",
     "afm",
     "experimental_landformclassification1",
-    "experimental_landformclassification2",
-    "pale_renewal_test",
-    "std_renewal_test"
+    "experimental_landformclassification2"
    ],
    "title": "令和8年（2026年）熊本地震に関する情報 | 国土地理院",
    "url": "https://www.gsi.go.jp/BOUSAI/20260728_kumamoto_earthquake.html"
