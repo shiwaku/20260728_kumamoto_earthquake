@@ -1,5 +1,5 @@
 {
- "fetched_at": "2026-10-06T02:08:59Z",
+ "fetched_at": "2026-10-21T00:28:51Z",
  "pages": {
   "20260728_kumamoto_earthquake": {
    "files": [
@@ -566,7 +566,6 @@
     "http://www.gsi.go.jp/common/000095940.pdf",
     "https://insarmap.gsi.go.jp/geotiff/2026kumamoto/urgent_earthquake_20260728R8kumamoto_3d_9obs_clip.ew.mask.tif",
     "https://insarmap.gsi.go.jp/geotiff/2026kumamoto/urgent_earthquake_20260728R8kumamoto_3d_9obs_clip.ns.mask.tif",
-    "https://insarmap.gsi.go.jp/geotiff/2026kumamoto/urgent_earthquake_20260728R8kumamoto_3d_9obs_clip.ud.mask.tif",
     "https://www.gsi.go.jp/common/000230589.pdf",
     "https://www.gsi.go.jp/common/000279738.pdf",
     "https://www.gsi.go.jp/common/000279810.pdf",
@@ -670,7 +669,7 @@
     "米国航空宇宙局（NASA）及びインド宇宙研究機関（ISRO）が共同開発したLバンドSAR衛星で、2025年７月に打ち上げられました。",
     "今回は、3次元解析の精度を高めるために初めて試験的に解析を行いました。",
     "迅速かつ高精度に地殻・地盤変動を把握するため、海外衛星の活用についても引き続き検討していく予定です。",
-    "〇参考資料",
+    "○参考資料",
     "SAR 干渉解析の原理（PDF 形式：880KB）",
     "SAR画像の見方",
     "非干渉（砂をまいたようなざらざらした模様）とは",
@@ -680,11 +679,11 @@
     "2.5次元解析とは",
     "3次元解析とは",
     "3次元解析結果のダウンロード",
-    "3次元解析結果（GeoTIFFファイル）： 東西（18MB） ・",
-    "南北（18MB） ・",
-    "上下（18MB）",
+    "3次元解析結果（GeoTIFFファイル） : 東西（18MB） ・ 南北（18MB） ・ <a data-cke-saved-href=\"https://insarmap.gsi.go.jp/geotiff/2026kumamoto/urgent_earthquake_20260728R8kumamoto_3d_9obs_clip.ud.mask.tif\" href=\"https://insarmap.gsi.go.jp/geotiff/2026kumamoto/urgent_earthquake_20260728R8kumamoto_3d_9obs_clip.ud.mask.tif\" _blank\"=\"\">上下（18MB）",
     "このGeoTIFFファイルは、各ピクセルに変動量が格納された数値ファイルですので、標準の画像表示ソフトでは白黒の画像が表示されます。",
     "表示及び変動量の確認には、お手持ちのGISソフトや 衛星SAR地盤変動測量成果閲覧プログラム をご利用下さい。",
+    "本解析結果には、DOI（デジタルオブジェクト識別子）が付与されています。これらのプロダクトを引用又は二次利用する際には、DOIの記載をいただけると助かります。",
+    "DOI : https://doi.org/10.57499/GSI_SAR_2026_001",
     "添付資料",
     "「だいち2号」「だいち4号」及びNISAR観測データの3次元解析による令和8年熊本地震に伴う地殻変動（2026年9月9日発表）（PDF形式：886KB）",
     "「だいち2号」及び「だいち4号」観測データの3次元解析による令和8年熊本地震に伴う地殻変動（2026年8月21日発表）（PDF形式：884KB）",
