@@ -1,5 +1,5 @@
 {
- "fetched_at": "2026-10-21T00:28:51Z",
+ "fetched_at": "2026-10-23T00:29:20Z",
  "pages": {
   "20260728_kumamoto_earthquake": {
    "files": [
@@ -564,6 +564,7 @@
    "created": "2026年7月29日",
    "files": [
     "http://www.gsi.go.jp/common/000095940.pdf",
+    "https://insarmap.gsi.go.jp/geotiff//2026kumamoto/urgent_earthquake_20260728R8kumamoto_3d_9obs_clip.ud.mask.tif",
     "https://insarmap.gsi.go.jp/geotiff/2026kumamoto/urgent_earthquake_20260728R8kumamoto_3d_9obs_clip.ew.mask.tif",
     "https://insarmap.gsi.go.jp/geotiff/2026kumamoto/urgent_earthquake_20260728R8kumamoto_3d_9obs_clip.ns.mask.tif",
     "https://www.gsi.go.jp/common/000230589.pdf",
@@ -679,7 +680,7 @@
     "2.5次元解析とは",
     "3次元解析とは",
     "3次元解析結果のダウンロード",
-    "3次元解析結果（GeoTIFFファイル） : 東西（18MB） ・ 南北（18MB） ・ <a data-cke-saved-href=\"https://insarmap.gsi.go.jp/geotiff/2026kumamoto/urgent_earthquake_20260728R8kumamoto_3d_9obs_clip.ud.mask.tif\" href=\"https://insarmap.gsi.go.jp/geotiff/2026kumamoto/urgent_earthquake_20260728R8kumamoto_3d_9obs_clip.ud.mask.tif\" _blank\"=\"\">上下（18MB）",
+    "3次元解析結果（GeoTIFFファイル） : 東西（18MB） ・ 南北（18MB） ・ 上下（18MB）",
     "このGeoTIFFファイルは、各ピクセルに変動量が格納された数値ファイルですので、標準の画像表示ソフトでは白黒の画像が表示されます。",
     "表示及び変動量の確認には、お手持ちのGISソフトや 衛星SAR地盤変動測量成果閲覧プログラム をご利用下さい。",
     "本解析結果には、DOI（デジタルオブジェクト識別子）が付与されています。これらのプロダクトを引用又は二次利用する際には、DOIの記載をいただけると助かります。",
